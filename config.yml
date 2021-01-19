@@ -1,0 +1,36 @@
+default:
+  data_preparation:
+    # Child birth date filters the cohort by age
+    child_birth_date_min: "01/01/1982"
+    child_birth_date_max: "31/12/1987"
+    
+    # The cohort should live continuously in NL in the following period
+    child_live_start: "01/01/2014"
+    child_live_end: "31/12/2018"
+    
+    # The cohort is allowed to be unregistered for this many days 
+    # in this period
+    child_live_slack_days: 3
+    
+    # Only cohort children with parents in this age range should be considered
+    parent_min_age_at_birth: 15
+    parent_max_age_at_birth: 50
+    
+    # Income will be deflated to cpi_base_year euros.
+    cpi_base_year: 2018
+    
+  data_analysis:
+    test: "test"
+    
+  file_locations:
+    # The data folder is the root folder of the cbs microdata tables
+    data_folder: "data"
+    # The scratch folder is used to write intermediate output
+    scratch_folder: "scratch"
+    
+
+# Some file locations are different in the production environment at CBS
+cbs:
+  file_locations: 
+    data_folder: "G:"
+

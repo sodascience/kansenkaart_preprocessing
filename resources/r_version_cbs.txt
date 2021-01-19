@@ -1,0 +1,10 @@
+R version 3.6.2 (2019-12-12)
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+Running under: Windows Server >= 2012 x64 (build 9200)
+
+Matrix products: default
+
+locale:
+[1] LC_COLLATE=Dutch_Netherlands.1252  LC_CTYPE=Dutch_Netherlands.1252
+[3] LC_MONETARY=Dutch_Netherlands.1252 LC_NUMERIC=C
+[5] LC_TIME=Dutch_Netherlands.1252
