@@ -31,8 +31,7 @@ gba_dat <-
 
 cohort_dat <- 
   gba_dat %>% 
-  filter(birthdate >= dmy(cfg$child_birth_date_min), 
-         birthdate <= dmy(cfg$child_birth_date_max))
+  filter(birthdate %within% interval(dmy(cfg$child_birth_date_min), dmy(cfg$child_birth_date_max)))
 
 #### LIVE CONTINUOUSLY IN NL FROM 2014 TO 2018 ####
 # We only include children who live continuously in the Netherlands between child_live_start and child_live_end.
@@ -46,9 +45,10 @@ cutoff_days <- as.numeric(difftime(end_date, start_date, units = "days")) - cfg$
 # throw out anything with an end date before start_date, and anything with a start date after end_date
 # then also set the start date of everything to start_date, and the end date of everything to end_date
 # then compute the timespan of each record
+# TODO: check this once more
 adres_tab <- 
   adres_tab %>% 
-  filter(GBADATUMEINDEADRESHOUDING > start_date, GBADATUMAANVANGADRESHOUDING < end_date) %>% 
+  filter(GBADATUMEINDEADRESHOUDING %within% interval(start_date, end_date)) %>% 
   mutate(
     recordend   = as_date(ifelse(GBADATUMEINDEADRESHOUDING > end_date, end_date, GBADATUMEINDEADRESHOUDING)),
     recordstart = as_date(ifelse(GBADATUMAANVANGADRESHOUDING < start_date, start_date, GBADATUMAANVANGADRESHOUDING)),
@@ -97,11 +97,56 @@ cohort_dat <-
 
 
 #### REGION LINK ####
-vsl_path <- file.path(loc$data_folder, "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav")
-vslgwb   <- read_sav(vls_path)
+
+# find childhood home
+adres_path <- file.path(loc$data_folder, "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2018V1.sav")
+adres_tab  <- read_sav(adres_path)
 
 
-# TODO: more region information
+if (cfg$childhood_home_first) {
+  # take the first address registration to be their childhood home
+  home_tab <- 
+    adres_tab %>% 
+    arrange(GBADATUMAANVANGADRESHOUDING) %>% 
+    group_by(RINPERSOON) %>% 
+    summarise(childhood_home = RINOBJECTNUMMER[1])
+} else {
+  # for each person, throw out the registrations from after they are 18 and select the longest-registered address from 0
+  # to 18
+  home_tab <- 
+    left_join(adres_tab, cohort_dat %>% select(RINPERSOON, RINPERSOONS, birthdate)) %>% 
+    mutate(birthday_cutoff = birthdate + years(cfg$childhood_home_cutoff_year)) %>% 
+    filter(GBADATUMAANVANGADRESHOUDING %within% interval(birthdate, birthday_cutoff)) %>% 
+    mutate(duration = difftime(min(GBADATUMEINDEADRESHOUDING, birthday_cutoff), GBADATUMAANVANGADRESHOUDING)) %>% 
+    group_by(RINPERSOON) %>% 
+    arrange(-duration, .by_group = TRUE) %>% 
+    summarise(childhood_home = RINOBJECTNUMMER[1])
+}
+
+# add childhood home to data
+cohort_dat <- left_join(cohort_dat, home_tab)
+
+
+# clean the postcode table
+vslpc_path <- file.path(loc$data_folder, "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2020031.sav")
+vslpc_tab  <- read_sav(vslpc_path)
+
+# only consider postal codes valid on target_date and create postcode-3 level
+vslpc_tab <- 
+  vslpc_tab %>% 
+  filter(dmy(cfg$postcode_target_date) %within% interval(DATUMAANVPOSTCODENUMADRES, DATUMEINDPOSTCODENUMADRES)) %>% 
+  mutate(postcode3 = as.character(floor(as.numeric(POSTCODENUM)/10))) %>% 
+  select(RINOBJECTNUMMER, postcode4 = POSTCODENUM, postcode3)
+
+# add the postal codes to the cohort
+cohort_dat <- left_join(cohort_dat, vslpc_tab, by = c("childhood_home" = "RINOBJECTNUMMER"))
+
+
+# TODO: more region information from gwtab
+# vslgwb_path <- file.path(loc$data_folder, "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav")
+# vslgwb_tab  <- read_sav(vslgwb_path)
+
+
 
 
 
