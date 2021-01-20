@@ -2,7 +2,7 @@
 #
 # 2. Predictor creation.
 #    - Adding parent income and income percentile to the cohort.
-#    - Adding ethnicity information to the cohort.
+#    - Adding migration background information to the cohort.
 #    - Adding gender information to the cohort.
 #    - Writing `scratch/02_predictor.rds`
 #

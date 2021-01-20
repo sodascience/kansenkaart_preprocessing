@@ -11,11 +11,11 @@ The data preparation pipeline has 4 components. The behaviour of the data prepar
 1. Cohort creation. 
     - Selecting the cohort based on filtering criteria. 
     - Adding parent information to the cohort.
-    - Adding postal code information to the cohort.
+    - Adding postal code / region information to the cohort.
     - Writing `scratch/01_cohort.rds`.
 2. Predictor creation.
     - Adding parent income and income percentile to the cohort.
-    - Adding ethnicity information to the cohort.
+    - Adding migration background information to the cohort.
     - Adding gender information to the cohort.
     - Writing `scratch/02_predictor.rds`
 3. Outcome creation.

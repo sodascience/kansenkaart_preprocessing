@@ -3,12 +3,12 @@
 # 1. Cohort creation. 
 #   - Selecting the cohort based on filtering criteria. 
 #   - Adding parent information to the cohort.
-#   - Adding postal code information to the cohort.
+#   - Adding postal code / region information to the cohort.
 #   - Writing `scratch/01_cohort.rds`.
 #
 # (c) ODISSEI Social Data Science team 2021
 
-### PACKAGES ###
+#### PACKAGES ####
 library(tidyverse)
 library(lubridate)
 library(haven)
@@ -94,6 +94,15 @@ cohort_dat <-
     age_at_birth_ma >= cfg$parent_min_age, age_at_birth_ma <= cfg$parent_max_age,
     age_at_birth_pa >= cfg$parent_min_age, age_at_birth_pa <= cfg$parent_max_age
   )
+
+
+#### REGION LINK ####
+vsl_path <- file.path(loc$data_folder, "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav")
+vslgwb   <- read_sav(vls_path)
+
+
+# TODO: more region information
+
 
 
 #### WRITE OUTPUT TO SCRATCH ####
