@@ -142,12 +142,18 @@ vslpc_tab <-
 cohort_dat <- left_join(cohort_dat, vslpc_tab, by = c("childhood_home" = "RINOBJECTNUMMER"))
 
 
-# TODO: more region information from gwtab
-# vslgwb_path <- file.path(loc$data_folder, "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav")
-# vslgwb_tab  <- read_sav(vslgwb_path)
+# add region/neighbourhood codes to cohort
+vslgwb_path <- file.path(loc$data_folder, "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav")
+vslgwb_tab  <- read_sav(vslgwb_path)
 
+# select region/neighbourhood from the target date
+vslgwb_tab <- 
+  vslgwb_tab %>% 
+  select("childhood_home" = "RINOBJECTNUMMER", 
+         "wijk_code"      = paste0("WC", year(dmy(cfg$gwb_target_date))), 
+         "buurt_code"     = paste0("BC", year(dmy(cfg$gwb_target_date))))
 
-
+cohort_dat <- left_join(cohort_dat, vslgwb_tab)
 
 
 #### WRITE OUTPUT TO SCRATCH ####

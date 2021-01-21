@@ -34,7 +34,7 @@ default:
     
   file_locations:
     # The data folder is the root folder of the cbs microdata tables
-    data_folder: "data"
+    data_folder: "cbsdata"
     # The scratch folder is used to write intermediate output
     scratch_folder: "scratch"
     
