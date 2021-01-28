@@ -27,7 +27,8 @@ gba_dat <-
                                     "GBAGEBOORTEJAAR", "GBAGEBOORTEMAAND", "GBAGEBOORTEDAG", "GBAGENERATIE", 
                                     "GBAHERKOMSTGROEPERING")) %>% 
   mutate(birthdate = ymd(paste(GBAGEBOORTEJAAR, GBAGEBOORTEMAAND, GBAGEBOORTEDAG, sep = "-"))) %>% 
-  select(-GBAGEBOORTEJAAR, -GBAGEBOORTEMAAND, -GBAGEBOORTEDAG)
+  select(-GBAGEBOORTEJAAR, -GBAGEBOORTEMAAND, -GBAGEBOORTEDAG) %>% 
+  as_factor(only_labelled = TRUE, levels = "labels")
 
 cohort_dat <- 
   gba_dat %>% 
@@ -49,6 +50,7 @@ cutoff_days <- as.numeric(difftime(end_date, start_date, units = "days")) - cfg$
 adres_tab <- 
   adres_tab %>% 
   filter(GBADATUMEINDEADRESHOUDING %within% interval(start_date, end_date)) %>% 
+  as_factor(only_labelled = TRUE, levels = "labels") %>% 
   mutate(
     recordend   = as_date(ifelse(GBADATUMEINDEADRESHOUDING > end_date, end_date, GBADATUMEINDEADRESHOUDING)),
     recordstart = as_date(ifelse(GBADATUMAANVANGADRESHOUDING < start_date, start_date, GBADATUMAANVANGADRESHOUDING)),
@@ -75,7 +77,11 @@ cohort_dat <-
 #### PARENT LINK ####
 # add parent id to cohort
 kindouder_path <- file.path(loc$data_folder, "Bevolking/KINDOUDERTAB/KINDOUDER2018TABV1.sav")
-cohort_dat <- left_join(cohort_dat, read_sav(kindouder_path))
+cohort_dat <- left_join(
+  x = cohort_dat, 
+  y = read_sav(kindouder_path) %>% as_factor(only_labelled = TRUE, levels = "labels") %>% select(-RINPERSOONS), 
+  by = "RINPERSOON"
+)
 
 # add parents birth dates to cohort
 cohort_dat <- 
@@ -87,8 +93,8 @@ cohort_dat <-
 cohort_dat <- 
   cohort_dat %>% 
   mutate(
-    age_at_birth_ma = as.period(birthdate - birthdate_ma) / years(1),
-    age_at_birth_pa = as.period(birthdate - birthdate_pa) / years(1)
+    age_at_birth_ma = interval(birthdate_ma, birthdate) / years(1),
+    age_at_birth_pa = interval(birthdate_pa, birthdate) / years(1)
   ) %>% 
   filter(
     age_at_birth_ma >= cfg$parent_min_age, age_at_birth_ma <= cfg$parent_max_age,
@@ -100,13 +106,14 @@ cohort_dat <-
 
 # find childhood home
 adres_path <- file.path(loc$data_folder, "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2018V1.sav")
-adres_tab  <- read_sav(adres_path)
+adres_tab  <- read_sav(adres_path) %>% as_factor(only_labelled = TRUE, levels = "labels")
 
 
 if (cfg$childhood_home_first) {
   # take the first address registration to be their childhood home
   home_tab <- 
     adres_tab %>% 
+    filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
     arrange(GBADATUMAANVANGADRESHOUDING) %>% 
     group_by(RINPERSOON) %>% 
     summarise(childhood_home = RINOBJECTNUMMER[1])
@@ -114,11 +121,11 @@ if (cfg$childhood_home_first) {
   # for each person, throw out the registrations from after they are 18 and select the longest-registered address from 0
   # to 18
   home_tab <- 
-    left_join(adres_tab, cohort_dat %>% select(RINPERSOON, RINPERSOONS, birthdate)) %>% 
+    inner_join(adres_tab, cohort_dat %>% select(RINPERSOON, RINPERSOONS, birthdate)) %>% 
     mutate(birthday_cutoff = birthdate + years(cfg$childhood_home_cutoff_year)) %>% 
     filter(GBADATUMAANVANGADRESHOUDING %within% interval(birthdate, birthday_cutoff)) %>% 
     mutate(duration = difftime(min(GBADATUMEINDEADRESHOUDING, birthday_cutoff), GBADATUMAANVANGADRESHOUDING)) %>% 
-    group_by(RINPERSOON) %>% 
+    group_by(RINPERSOON) %>%  
     arrange(-duration, .by_group = TRUE) %>% 
     summarise(childhood_home = RINOBJECTNUMMER[1])
 }
