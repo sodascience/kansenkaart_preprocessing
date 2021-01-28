@@ -29,6 +29,10 @@ default:
     # Income will be deflated to cpi_base_year euros.
     cpi_base_year: 2018
     
+    # Parent income year range
+    parent_income_year_min: 2006
+    parent_income_year_max: 2010
+    
   data_analysis:
     test: "test"
     

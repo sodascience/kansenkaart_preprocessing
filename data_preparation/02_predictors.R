@@ -8,8 +8,21 @@
 #
 # (c) ODISSEI Social Data Science team 2021
 
-#### PARENT INCOME 2006-2010 ####
-# create a table with incomes at the 2018€ level
+#### PACKAGES ####
+library(tidyverse)
+library(haven)
+
+#### CONFIGURATION ####
+# load main cohort dataset
+cohort_dat <- read_rds("scratch/01_cohort.rds")
+
+# load the configuration
+cfg <- config::get("data_preparation")
+loc <- config::get("file_locations")
+
+
+#### PARENT INCOME ####
+# create a table with incomes at the cpi_base_year€ level
 # first, load consumer price index data
 # source: https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83131NED/table?ts=1610019128426
 cpi_tab <- 
@@ -27,24 +40,38 @@ cpi_tab <-
     cpi_derived = cpi_derived / cpi_tab %>% filter(year == cfg$cpi_base_year) %>% pull(cpi_derived) * 100
   )
 
-# create income table for parents
-inpa_path_2006 <- file.path(loc$data_folder, "InkomenBestedingen/INPATAB/INPA2006TABV3.sav")
-inpa_path_2007 <- file.path(loc$data_folder, "InkomenBestedingen/INPATAB/INPA2007TABV3.sav")
-inpa_path_2008 <- file.path(loc$data_folder, "InkomenBestedingen/INPATAB/INPA2008TABV3.sav")
-inpa_path_2009 <- file.path(loc$data_folder, "InkomenBestedingen/INPATAB/INPA2009TABV2.sav")
-inpa_path_2010 <- file.path(loc$data_folder, "InkomenBestedingen/INPATAB/INPA2010TABV3.sav")
-inpa_parents <- bind_rows(
-  read_sav(inpa_path_2006) %>% mutate(year = 2006),
-  read_sav(inpa_path_2007) %>% mutate(year = 2007),
-  read_sav(inpa_path_2008) %>% mutate(year = 2008),
-  read_sav(inpa_path_2009) %>% mutate(year = 2009),
-  read_sav(inpa_path_2010) %>% mutate(year = 2010),
-)
 
-# clean up
+# get inpa data from each requested year into single data frame
+get_inpa_filename <- function(year) {
+  # function to get latest inpa version of specified year
+  # get all inpa files with the specified year
+  fl <- list.files(
+    path = file.path(loc$data_folder, "InkomenBestedingen/INPATAB/"),
+    pattern = paste0("INPA", year, "TABV[0-9]+\\.sav"), 
+    full.names = TRUE
+  )
+  # return only the latest version
+  sort(fl, decreasing = TRUE)[1]
+}
+
+parents <- c(cohort_dat$RINPERSOONMa, cohort_dat$RINPERSOONpa)
+inpa_parents <- tibble(RINPERSOON = integer(), INPPERSBRUT = double(), year = integer())
+for (year in seq(as.integer(cfg$parent_income_year_min), as.integer(cfg$parent_income_year_max))) {
+  inpa_parents <- 
+    # read file from disk
+    read_sav(get_inpa_filename(year), col_select = c("RINPERSOON", "INPPERSBRUT")) %>% 
+    # select only incomes of parents
+    filter(RINPERSOON %in% parents) %>% 
+    # add year
+    mutate(year = year) %>% 
+    # add to inpa_parents
+    bind_rows(inpa_parents, .)
+}
+
+# remove negative and NA incomes
 inpa_parents <-
   inpa_parents %>% 
-  mutate(INPPERSBRUT = ifelse(INPPERSBRUT < 0, NA, INPPERSBRUT)) # remove negative incomes
+  mutate(INPPERSBRUT = ifelse(INPPERSBRUT == 9999999999 | INPPERSBRUT < 0, NA, INPPERSBRUT)) 
 
 # deflate
 inpa_parents <- 
@@ -57,12 +84,40 @@ inpa_parents <-
 inpa_parents <- 
   inpa_parents %>% 
   group_by(RINPERSOON) %>% 
-  summarize(income = mean(INPPERSBRUT, na.rm = TRUE))
+  summarize(income   = mean(INPPERSBRUT, na.rm = TRUE),
+            income_n = sum(!is.na(INPPERSBRUT)))
+
+# table of the number of years the mean income is based on
+print(table(`income years` = inpa_parents$income_n))
 
 # add to data
-cohort_dat <- left_join(cohort_dat, inpa_parents %>% rename(income_ma = income), by = c("RINPERSOONMa" = "RINPERSOON"))
-cohort_dat <- left_join(cohort_dat, inpa_parents %>% rename(income_pa = income), by = c("RINPERSOONpa" = "RINPERSOON"))
-cohort_dat <- cohort_dat %>% mutate(income_parents = mean(c(income_ma, income_pa), na.rm = TRUE))
+# mothers
+cohort_dat <- left_join(
+  x = cohort_dat, 
+  y = inpa_parents %>% rename(income_ma = income, income_n_ma = income_n), 
+  by = c("RINPERSOONMa" = "RINPERSOON")
+)
+# fathers
+cohort_dat <- left_join(
+  x = cohort_dat, 
+  y = inpa_parents %>% rename(income_pa = income, income_n_pa = income_n), 
+  by = c("RINPERSOONpa" = "RINPERSOON")
+)
+# parents
+cohort_dat <- cohort_dat %>% mutate(income_parents = income_ma + income_pa)
 
 # free up memory
 rm(inpa_parents)
+
+# compute income transformations
+cohort_dat <- 
+  cohort_dat %>% 
+  mutate(
+    income_parents_1log = log(income_parents + 1),
+    income_parents_rank = rank(income_parents, na.last = "keep", ties.method = "average"),
+    income_parents_perc = income_parents_rank / max(income_parents_rank)
+  )
+
+
+#### WRITE OUTPUT TO SCRATCH ####
+write_rds(cohort_dat, file.path(loc$scratch_folder, "02_predictors.rds"))
