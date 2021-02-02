@@ -53,8 +53,9 @@ get_inpa_filename <- function(year) {
   sort(fl, decreasing = TRUE)[1]
 }
 
+# TODO: child_income_year_min and max in config
 inpa_children <- tibble(RINPERSOON = integer(), INPPERSBRUT = double(), year = integer())
-for (year in seq(as.integer(cfg$parent_income_year_min), as.integer(cfg$parent_income_year_max))) {
+for (year in seq(as.integer(cfg$child_income_year_min), as.integer(cfg$child_income_year_max))) {
   inpa_children <- 
     # read file from disk
     read_sav(get_inpa_filename(year), col_select = c("RINPERSOON", "INPPERSBRUT")) %>% 

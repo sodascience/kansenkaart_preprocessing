@@ -34,7 +34,7 @@ cohort_dat <-
   gba_dat %>% 
   filter(birthdate %within% interval(dmy(cfg$child_birth_date_min), dmy(cfg$child_birth_date_max)))
 
-#### LIVE CONTINUOUSLY IN NL FROM 2014 TO 2018 ####
+#### LIVE CONTINUOUSLY IN NL ####
 # We only include children who live continuously in the Netherlands between child_live_start and child_live_end.
 adres_path <- file.path(loc$data_folder, "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2018V1.sav")
 adres_tab  <- read_sav(adres_path)
