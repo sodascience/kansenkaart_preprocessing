@@ -42,6 +42,15 @@ default:
     # The scratch folder is used to write intermediate output
     scratch_folder: "scratch"
     
+data_file:
+  01_cohort_data:
+    gba_data: "Bevolking/GBAPERSOONTAB/GBAPERSOON2018TABV2.sav"
+    gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2018V1.sav"
+    kind_data: "Bevolking/KINDOUDERTAB/KINDOUDER2018TABV1.sav"
+    postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2020031.sav"
+    vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav"
+
+
 
 # Some file locations are different in the production environment at CBS
 cbs:
