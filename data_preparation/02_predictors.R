@@ -19,7 +19,6 @@ cohort_dat <- read_rds("scratch/01_cohort.rds")
 # load the configuration
 cfg <- config::get("data_preparation")
 loc <- config::get("file_locations")
-data <- config::get("02_predictors_data")
 
 
 #### PARENT INCOME ####
@@ -27,7 +26,7 @@ data <- config::get("02_predictors_data")
 # first, load consumer price index data
 # source: https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83131NED/table?ts=1610019128426
 cpi_tab <- 
-  read_delim(data$cpi_index_data, ";", skip = 5, 
+  read_delim(loc$cpi_index_data, ";", skip = 5, 
              col_names = c("year", "cpi", "cpi_derived", "cpi_change", "cpi_change_derived"), 
              col_types = "ccccc") %>% 
   mutate(across(starts_with("cpi"), parse_number, locale = locale(decimal_mark = ","))) %>% 

@@ -17,12 +17,11 @@ library(haven)
 # load the configuration
 cfg <- config::get("data_preparation")
 loc <- config::get("file_locations")
-data <- config::get("01_cohort_data") 
 
 # TODO: configuration entries for table locations
 
 #### SELECT COHORT FROM GBA ####
-gba_path <- file.path(loc$data_folder, data$gba_data)
+gba_path <- file.path(loc$data_folder, loc$gba_data)
 gba_dat <-  
   read_sav(gba_path, col_select = c("RINPERSOON", "RINPERSOONS", "GBAGEBOORTELAND", "GBAGESLACHT", 
                                     "GBAGEBOORTEJAAR", "GBAGEBOORTEMAAND", "GBAGEBOORTEDAG", "GBAGENERATIE", 
@@ -37,7 +36,7 @@ cohort_dat <-
 
 #### LIVE CONTINUOUSLY IN NL ####
 # We only include children who live continuously in the Netherlands between child_live_start and child_live_end.
-adres_path <- file.path(loc$data_folder, data$gbaao_data)
+adres_path <- file.path(loc$data_folder, loc$gbaao_data)
 adres_tab  <- read_sav(adres_path)
 
 start_date  <- dmy(cfg$child_live_start)
@@ -77,7 +76,7 @@ cohort_dat <-
 
 #### PARENT LINK ####
 # add parent id to cohort
-kindouder_path <- file.path(loc$data_folder, data$kind_data)
+kindouder_path <- file.path(loc$data_folder, loc$kind_data)
 cohort_dat <- left_join(
   x = cohort_dat, 
   y = read_sav(kindouder_path) %>% as_factor(only_labelled = TRUE, levels = "labels") %>% select(-RINPERSOONS), 
@@ -106,7 +105,7 @@ cohort_dat <-
 #### REGION LINK ####
 
 # find childhood home
-adres_path <- file.path(loc$data_folder, data$gbaao_data)
+adres_path <- file.path(loc$data_folder, loc$gbaao_data)
 adres_tab  <- read_sav(adres_path) %>% as_factor(only_labelled = TRUE, levels = "labels")
 
 
@@ -136,7 +135,7 @@ cohort_dat <- left_join(cohort_dat, home_tab)
 
 
 # clean the postcode table
-vslpc_path <- file.path(loc$data_folder, data$postcode_data)
+vslpc_path <- file.path(loc$data_folder, loc$postcode_data)
 vslpc_tab  <- read_sav(vslpc_path)
 
 # only consider postal codes valid on target_date and create postcode-3 level
@@ -151,7 +150,7 @@ cohort_dat <- left_join(cohort_dat, vslpc_tab, by = c("childhood_home" = "RINOBJ
 
 
 # add region/neighbourhood codes to cohort
-vslgwb_path <- file.path(loc$data_folder, data$vslgwb_data)
+vslgwb_path <- file.path(loc$data_folder, loc$vslgwb_data)
 vslgwb_tab  <- read_sav(vslgwb_path)
 
 # select region/neighbourhood from the target date
