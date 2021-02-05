@@ -19,6 +19,7 @@ cohort_dat <- read_rds("scratch/01_cohort.rds")
 # load the configuration
 cfg <- config::get("data_preparation")
 loc <- config::get("file_locations")
+data <- config::get("02_predictors_data")
 
 
 #### PARENT INCOME ####
@@ -26,7 +27,7 @@ loc <- config::get("file_locations")
 # first, load consumer price index data
 # source: https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83131NED/table?ts=1610019128426
 cpi_tab <- 
-  read_delim("resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv", ";", skip = 5, 
+  read_delim(data$cpi_index_data, ";", skip = 5, 
              col_names = c("year", "cpi", "cpi_derived", "cpi_change", "cpi_change_derived"), 
              col_types = "ccccc") %>% 
   mutate(across(starts_with("cpi"), parse_number, locale = locale(decimal_mark = ","))) %>% 
@@ -46,8 +47,8 @@ get_inpa_filename <- function(year) {
   # function to get latest inpa version of specified year
   # get all inpa files with the specified year
   fl <- list.files(
-    path = file.path(loc$data_folder, "InkomenBestedingen/INPATAB/"),
-    pattern = paste0("INPA", year, "TABV[0-9]+\\.sav"), 
+    path = file.path(loc$data_folder, "InkomenBestedingen/INTEGRAAL PERSOONLIJK INKOMEN/"),
+    pattern = paste0("PERSOONINK", year, "TABV[0-9]+\\.sav"), 
     full.names = TRUE
   )
   # return only the latest version
@@ -55,11 +56,11 @@ get_inpa_filename <- function(year) {
 }
 
 parents <- c(cohort_dat$RINPERSOONMa, cohort_dat$RINPERSOONpa)
-inpa_parents <- tibble(RINPERSOON = integer(), INPPERSBRUT = double(), year = integer())
+inpa_parents <- tibble(RINPERSOON = integer(), PERSBRUT = double(), year = integer())
 for (year in seq(as.integer(cfg$parent_income_year_min), as.integer(cfg$parent_income_year_max))) {
   inpa_parents <- 
     # read file from disk
-    read_sav(get_inpa_filename(year), col_select = c("RINPERSOON", "INPPERSBRUT")) %>% 
+    read_sav(get_inpa_filename(year), col_select = c("RINPERSOON", "PERSBRUT")) %>% 
     # select only incomes of parents
     filter(RINPERSOON %in% parents) %>% 
     # add year
@@ -71,21 +72,21 @@ for (year in seq(as.integer(cfg$parent_income_year_min), as.integer(cfg$parent_i
 # remove negative and NA incomes
 inpa_parents <-
   inpa_parents %>% 
-  mutate(INPPERSBRUT = ifelse(INPPERSBRUT == 9999999999 | INPPERSBRUT < 0, NA, INPPERSBRUT)) 
+  mutate(PERSBRUT = ifelse(PERSBRUT == 9999999999 | PERSBRUT < 0, NA, PERSBRUT)) 
 
 # deflate
 inpa_parents <- 
   inpa_parents %>% 
   left_join(cpi_tab %>% select(year, cpi), by = "year") %>% 
-  mutate(INPPERSBRUT = INPPERSBRUT / (cpi / 100)) %>% 
+  mutate(PERSBRUT = PERSBRUT / (cpi / 100)) %>% 
   select(-cpi)
 
 # compute mean
 inpa_parents <- 
   inpa_parents %>% 
   group_by(RINPERSOON) %>% 
-  summarize(income   = mean(INPPERSBRUT, na.rm = TRUE),
-            income_n = sum(!is.na(INPPERSBRUT)))
+  summarize(income   = mean(PERSBRUT, na.rm = TRUE),
+            income_n = sum(!is.na(PERSBRUT)))
 
 # table of the number of years the mean income is based on
 print(table(`income years` = inpa_parents$income_n))

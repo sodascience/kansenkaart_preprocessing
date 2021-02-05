@@ -51,7 +51,7 @@ cutoff_days <- as.numeric(difftime(end_date, start_date, units = "days")) - cfg$
 adres_tab <- 
   adres_tab %>% 
   filter(GBADATUMEINDEADRESHOUDING %within% interval(start_date, end_date)) %>% 
-  as_factor(only_labelled = TRUE, levels = "labels") %>% 
+  as_factor(only_labelled = TRUE, levels = "labels") %>%
   mutate(
     recordend   = as_date(ifelse(GBADATUMEINDEADRESHOUDING > end_date, end_date, GBADATUMEINDEADRESHOUDING)),
     recordstart = as_date(ifelse(GBADATUMAANVANGADRESHOUDING < start_date, start_date, GBADATUMAANVANGADRESHOUDING)),
@@ -158,6 +158,7 @@ vslgwb_tab  <- read_sav(vslgwb_path)
 vslgwb_tab <- 
   vslgwb_tab %>% 
   select("childhood_home" = "RINOBJECTNUMMER", 
+         "gemeente_code"  = paste0("Gem", year(dmy(cfg$gwb_target_date))), 
          "wijk_code"      = paste0("WC", year(dmy(cfg$gwb_target_date))), 
          "buurt_code"     = paste0("BC", year(dmy(cfg$gwb_target_date))))
 

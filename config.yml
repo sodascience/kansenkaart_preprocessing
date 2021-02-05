@@ -33,6 +33,10 @@ default:
     parent_income_year_min: 2006
     parent_income_year_max: 2010
     
+    #  Child income year range
+    child_income_year_min: 2017
+    child_income_year_max: 2018
+
   data_analysis:
     test: "test"
     
@@ -42,7 +46,6 @@ default:
     # The scratch folder is used to write intermediate output
     scratch_folder: "scratch"
     
-data_file:
   01_cohort_data:
     gba_data: "Bevolking/GBAPERSOONTAB/GBAPERSOON2018TABV2.sav"
     gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2018V1.sav"
@@ -50,6 +53,12 @@ data_file:
     postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2020031.sav"
     vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav"
 
+  02_predictors_data:
+    cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
+    
+  03_outcomes_data:
+    cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
+  
 
 
 # Some file locations are different in the production environment at CBS
