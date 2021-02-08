@@ -21,7 +21,7 @@ loc <- config::get("file_locations")
 # TODO: configuration entries for table locations
 
 #### SELECT COHORT FROM GBA ####
-gba_path <- file.path(loc$data_folder, "Bevolking/GBAPERSOONTAB/GBAPERSOON2018TABV2.sav")
+gba_path <- file.path(loc$data_folder, loc$gba_data)
 gba_dat <-  
   read_sav(gba_path, col_select = c("RINPERSOON", "RINPERSOONS", "GBAGEBOORTELAND", "GBAGESLACHT", 
                                     "GBAGEBOORTEJAAR", "GBAGEBOORTEMAAND", "GBAGEBOORTEDAG", "GBAGENERATIE", 
@@ -36,7 +36,7 @@ cohort_dat <-
 
 #### LIVE CONTINUOUSLY IN NL ####
 # We only include children who live continuously in the Netherlands between child_live_start and child_live_end.
-adres_path <- file.path(loc$data_folder, "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2018V1.sav")
+adres_path <- file.path(loc$data_folder, loc$gbaao_data)
 adres_tab  <- read_sav(adres_path)
 
 start_date  <- dmy(cfg$child_live_start)
@@ -50,7 +50,7 @@ cutoff_days <- as.numeric(difftime(end_date, start_date, units = "days")) - cfg$
 adres_tab <- 
   adres_tab %>% 
   filter(GBADATUMEINDEADRESHOUDING %within% interval(start_date, end_date)) %>% 
-  as_factor(only_labelled = TRUE, levels = "labels") %>% 
+  as_factor(only_labelled = TRUE, levels = "labels") %>%
   mutate(
     recordend   = as_date(ifelse(GBADATUMEINDEADRESHOUDING > end_date, end_date, GBADATUMEINDEADRESHOUDING)),
     recordstart = as_date(ifelse(GBADATUMAANVANGADRESHOUDING < start_date, start_date, GBADATUMAANVANGADRESHOUDING)),
@@ -76,7 +76,7 @@ cohort_dat <-
 
 #### PARENT LINK ####
 # add parent id to cohort
-kindouder_path <- file.path(loc$data_folder, "Bevolking/KINDOUDERTAB/KINDOUDER2018TABV1.sav")
+kindouder_path <- file.path(loc$data_folder, loc$kind_data)
 cohort_dat <- left_join(
   x = cohort_dat, 
   y = read_sav(kindouder_path) %>% as_factor(only_labelled = TRUE, levels = "labels") %>% select(-RINPERSOONS), 
@@ -105,7 +105,7 @@ cohort_dat <-
 #### REGION LINK ####
 
 # find childhood home
-adres_path <- file.path(loc$data_folder, "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2018V1.sav")
+adres_path <- file.path(loc$data_folder, loc$gbaao_data)
 adres_tab  <- read_sav(adres_path) %>% as_factor(only_labelled = TRUE, levels = "labels")
 
 
@@ -135,7 +135,7 @@ cohort_dat <- left_join(cohort_dat, home_tab)
 
 
 # clean the postcode table
-vslpc_path <- file.path(loc$data_folder, "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2020031.sav")
+vslpc_path <- file.path(loc$data_folder, loc$postcode_data)
 vslpc_tab  <- read_sav(vslpc_path)
 
 # only consider postal codes valid on target_date and create postcode-3 level
@@ -150,13 +150,14 @@ cohort_dat <- left_join(cohort_dat, vslpc_tab, by = c("childhood_home" = "RINOBJ
 
 
 # add region/neighbourhood codes to cohort
-vslgwb_path <- file.path(loc$data_folder, "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav")
+vslgwb_path <- file.path(loc$data_folder, loc$vslgwb_data)
 vslgwb_tab  <- read_sav(vslgwb_path)
 
 # select region/neighbourhood from the target date
 vslgwb_tab <- 
   vslgwb_tab %>% 
   select("childhood_home" = "RINOBJECTNUMMER", 
+         "gemeente_code"  = paste0("Gem", year(dmy(cfg$gwb_target_date))), 
          "wijk_code"      = paste0("WC", year(dmy(cfg$gwb_target_date))), 
          "buurt_code"     = paste0("BC", year(dmy(cfg$gwb_target_date))))
 
