@@ -41,7 +41,19 @@ cpi_tab <-
   )
 
 
-# get inpa data from each requested year into single data frame
+# get income data from each requested year into single data frame
+get_ipi_filename <- function(year) {
+  # function to get latest ipi version of specified year
+  # get all ipi files with the specified year
+  fl <- list.files(
+    path = file.path(loc$data_folder, "InkomenBestedingen/INTEGRAAL PERSOONLIJK INKOMEN/"),
+    pattern = paste0("PERSOONINK", year, "TABV[0-9]+\\.sav"), 
+    full.names = TRUE
+  )
+  # return only the latest version
+  sort(fl, decreasing = TRUE)[1]
+}
+
 get_inpa_filename <- function(year) {
   # function to get latest inpa version of specified year
   # get all inpa files with the specified year
@@ -55,59 +67,77 @@ get_inpa_filename <- function(year) {
 }
 
 parents <- c(cohort_dat$RINPERSOONMa, cohort_dat$RINPERSOONpa)
-inpa_parents <- tibble(RINPERSOON = integer(), PERSBRUT = double(), year = integer())
+
+income_parents <- tibble(RINPERSOON = integer(), income = double(), year = integer())
 for (year in seq(as.integer(cfg$parent_income_year_min), as.integer(cfg$parent_income_year_max))) {
-  inpa_parents <- 
-    # read file from disk
-    read_sav(get_inpa_filename(year), col_select = c("RINPERSOON", "PERSBRUT")) %>% 
-    # select only incomes of parents
-    filter(RINPERSOON %in% parents) %>% 
-    # add year
-    mutate(year = year) %>% 
-    # add to inpa_parents
-    bind_rows(inpa_parents, .)
+  if (year < 2011) {
+    # use IPI tab
+    income_parents <- 
+      # read file from disk
+      read_sav(get_ipi_filename(year), col_select = c("RINPERSOON", "PERSBRUT")) %>% 
+      rename(income = PERSBRUT) %>% 
+      # select only incomes of parents
+      filter(RINPERSOON %in% parents) %>% 
+      # add year
+      mutate(year = year) %>% 
+      # add to income parents
+      bind_rows(income_parents, .)
+  } else {
+    # use INPA tab
+    income_parents <- 
+      # read file from disk
+      read_sav(get_inpa_filename(year), col_select = c("RINPERSOON", "INPPERSBRUT")) %>% 
+      rename(income = INPPERSBRUT) %>% 
+      # select only incomes of parents
+      filter(RINPERSOON %in% parents) %>% 
+      # add year
+      mutate(year = year) %>% 
+      # add to income parents
+      bind_rows(income_parents, .)
+  }
 }
 
 # remove negative and NA incomes
-inpa_parents <-
-  inpa_parents %>% 
-  mutate(PERSBRUT = ifelse(PERSBRUT == 9999999999 | PERSBRUT < 0, NA, PERSBRUT)) 
+income_parents <-
+  income_parents %>% 
+  mutate(income = ifelse(income == 9999999999 | income < 0, NA, income)) 
+
 
 # deflate
-inpa_parents <- 
-  inpa_parents %>% 
+income_parents <- 
+  income_parents %>% 
   left_join(cpi_tab %>% select(year, cpi), by = "year") %>% 
-  mutate(PERSBRUT = PERSBRUT / (cpi / 100)) %>% 
+  mutate(income = income / (cpi / 100)) %>% 
   select(-cpi)
 
 # compute mean
-inpa_parents <- 
-  inpa_parents %>% 
+income_parents <- 
+  income_parents %>% 
   group_by(RINPERSOON) %>% 
-  summarize(income   = mean(PERSBRUT, na.rm = TRUE),
-            income_n = sum(!is.na(PERSBRUT)))
+  summarize(income_n = sum(!is.na(income)),
+            income   = mean(income, na.rm = TRUE))
 
 # table of the number of years the mean income is based on
-print(table(`income years` = inpa_parents$income_n))
+print(table(`income years` = income_parents$income_n))
 
 # add to data
 # mothers
 cohort_dat <- left_join(
   x = cohort_dat, 
-  y = inpa_parents %>% rename(income_ma = income, income_n_ma = income_n), 
+  y = income_parents %>% rename(income_ma = income, income_n_ma = income_n), 
   by = c("RINPERSOONMa" = "RINPERSOON")
 )
 # fathers
 cohort_dat <- left_join(
   x = cohort_dat, 
-  y = inpa_parents %>% rename(income_pa = income, income_n_pa = income_n), 
+  y = income_parents %>% rename(income_pa = income, income_n_pa = income_n), 
   by = c("RINPERSOONpa" = "RINPERSOON")
 )
 # parents
 cohort_dat <- cohort_dat %>% mutate(income_parents = income_ma + income_pa)
 
 # free up memory
-rm(inpa_parents)
+rm(income_parents)
 
 # compute income transformations
 cohort_dat <- 
@@ -117,6 +147,11 @@ cohort_dat <-
     income_parents_rank = rank(income_parents, na.last = "keep", ties.method = "average"),
     income_parents_perc = income_parents_rank / max(income_parents_rank)
   )
+
+
+
+#### MIGRATION BACKGROUND ####
+
 
 
 #### WRITE OUTPUT TO SCRATCH ####

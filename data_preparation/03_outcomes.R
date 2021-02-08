@@ -39,7 +39,19 @@ cpi_tab <-
     cpi_derived = cpi_derived / cpi_tab %>% filter(year == cfg$cpi_base_year) %>% pull(cpi_derived) * 100
   )
 
-# get inpa data from each requested year into single data frame
+# get income data from each requested year into single data frame
+get_ipi_filename <- function(year) {
+  # function to get latest ipi version of specified year
+  # get all ipi files with the specified year
+  fl <- list.files(
+    path = file.path(loc$data_folder, "InkomenBestedingen/INTEGRAAL PERSOONLIJK INKOMEN/"),
+    pattern = paste0("PERSOONINK", year, "TABV[0-9]+\\.sav"), 
+    full.names = TRUE
+  )
+  # return only the latest version
+  sort(fl, decreasing = TRUE)[1]
+}
+
 get_inpa_filename <- function(year) {
   # function to get latest inpa version of specified year
   # get all inpa files with the specified year
@@ -52,43 +64,63 @@ get_inpa_filename <- function(year) {
   sort(fl, decreasing = TRUE)[1]
 }
 
-# TODO: child_income_year_min and max in config
-inpa_children <- tibble(RINPERSOON = integer(), INPPERSBRUT = double(), year = integer())
+
+income_children <- tibble(RINPERSOON = integer(), income = double(), year = integer())
 for (year in seq(as.integer(cfg$child_income_year_min), as.integer(cfg$child_income_year_max))) {
-  inpa_children <- 
-    # read file from disk
-    read_sav(get_inpa_filename(year), col_select = c("RINPERSOON", "INPPERSBRUT")) %>% 
-    # select only incomes of parents
-    filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
-    # add year
-    mutate(year = year) %>% 
-    # add to inpa_parents
-    bind_rows(inpa_children, .)
+  if (year < 2011) {
+    # use IPI tab
+    income_children <- 
+      # read file from disk
+      read_sav(get_ipi_filename(year), col_select = c("RINPERSOON", "PERSBRUT")) %>% 
+      rename(income = PERSBRUT) %>% 
+      # select only incomes of children
+      filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
+      # add year
+      mutate(year = year) %>% 
+      # add to income children
+      bind_rows(income_children, .)
+  } else {
+    # use INPA tab
+    income_children <- 
+      # read file from disk
+      read_sav(get_inpa_filename(year), col_select = c("RINPERSOON", "INPPERSBRUT")) %>% 
+      rename(income = INPPERSBRUT) %>% 
+      # select only incomes of children
+      filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
+      # add year
+      mutate(year = year) %>% 
+      # add to income children
+      bind_rows(income_children, .)
+  }
 }
 
 # remove negative and NA incomes
-inpa_children <-
-  inpa_children %>% 
-  mutate(INPPERSBRUT = ifelse(INPPERSBRUT == 9999999999 | INPPERSBRUT < 0, NA, INPPERSBRUT)) 
+income_children <-
+  income_children %>% 
+  mutate(income = ifelse(income == 9999999999 | income < 0, NA, income)) 
 
 # deflate
-inpa_children <- 
-  inpa_children %>% 
+income_children <- 
+  income_children %>% 
   left_join(cpi_tab %>% select(year, cpi), by = "year") %>% 
-  mutate(INPPERSBRUT = INPPERSBRUT / (cpi / 100)) %>% 
+  mutate(income = income / (cpi / 100)) %>% 
   select(-cpi)
 
 # compute mean
-inpa_children <- 
-  inpa_children %>% 
+income_children <- 
+  income_children %>% 
   group_by(RINPERSOON) %>% 
-  summarize(income = mean(INPPERSBRUT, na.rm = TRUE))
+  summarize(income_n = sum(!is.na(income)),
+            income = mean(income, na.rm = TRUE))
+
+# table of the number of years the mean income is based on
+print(table(`income years` = income_children$income_n))
 
 # add to data
-cohort_dat <- left_join(cohort_dat, inpa_children, by = "RINPERSOON")
+cohort_dat <- left_join(cohort_dat, income_children, by = "RINPERSOON")
 
 # free up memory
-rm(inpa_children)
+rm(income_children)
 
 # compute income transformations
 cohort_dat <- 
