@@ -52,6 +52,9 @@ default:
     kind_data: "Bevolking/KINDOUDERTAB/KINDOUDER2018TABV1.sav"
     postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2020031.sav"
     vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav"
+    hoogste_opl_data: "Onderwijs/HOOGSTEOPLTAB/HOOGSTEOPL2018TABV3.sav"
+    
+    # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
     
   

@@ -131,6 +131,29 @@ cohort_dat <-
     income_perc = income_rank / max(income_rank)
   )
 
+#### HIGHER EDUCATION ####
+hopl_tab <- 
+  read_sav(file.path(loc$data_folder, loc$hoogste_opl_data)) %>% 
+  mutate(RINPERSOONS = as_factor(RINPERSOONS))
+
+hopl_tab <-
+  hopl_tab %>% 
+  rename(
+    edu_followed = OPLNIVSOI2016AGG4HGMETNIRWO, 
+    edu_attained = OPLNIVSOI2016AGG4HBMETNIRWO
+  ) %>% 
+  mutate(across(c(edu_followed, edu_attained), na_if, 9999)) %>% 
+  mutate(
+    hbo_attained = factor(edu_attained > 3000, levels = c(TRUE, FALSE), labels = c("Yes", "No")),
+    wo_attained  = factor(edu_attained %in% c(3113, 3212, 3213), levels = c(TRUE, FALSE), labels = c("Yes", "No"))
+    # hbo_followed     = as.integer(edu_followed > 3000), # codes above 3000 indicate hbo
+    # wo_followed      = as.integer(edu_followed %in% c(3113, 3212, 3213)),
+    # edu_lvl_followed = factor(floor(edu_followed/1000), levels = 1:3, labels = c("lower", "middle", "higher")),
+    # edu_lvl_attained = factor(floor(edu_attained/1000), levels = 1:3, labels = c("lower", "middle", "higher"))
+  ) %>% 
+  select(-edu_attained, -edu_followed)
+
+cohort_dat <- left_join(cohort_dat, hopl_tab)
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
