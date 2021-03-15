@@ -156,6 +156,31 @@ hopl_tab <-
 cohort_dat <- left_join(cohort_dat, hopl_tab)
 
 
+#### SOCIOECONOMIC ####
+secm_tab <- 
+  read_sav(file.path(loc$data_folder, loc$secm_data)) %>% 
+  mutate(RINPERSOONS = as_factor(RINPERSOONS))
+
+secm_tab <- 
+  secm_tab %>%
+  mutate(
+    AANVSECM = as.Date(AANVSECM, format="%Y%m%d"),
+    EINDSECM = as.Date(EINDSECM, format="%Y%m%d")
+    ) %>%
+  filter(
+    AANVSECM <= "2018-12-31" & EINDSECM >= "2018-12-31" # entry that is still open on 31 dec 2018
+         ) %>% 
+  mutate(
+    employed = as.integer(SECM %in% c(11, 12, 13, 14)),
+    social.benefits = as.integer(SECM %in% c(22)),
+    social.benefits = as.integer(SECM %in% c(24))
+  ) %>%
+  distinct(.keep_all = FALSE # keep unique records
+           ) %>%
+  select(-c(AANVSECM, EINDSECM, SECM))
+  
+cohort_dat <- left_join(cohort_dat, secm_tab)
+
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
