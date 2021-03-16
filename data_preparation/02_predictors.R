@@ -143,7 +143,7 @@ rm(income_parents)
 cohort_dat <- 
   cohort_dat %>% 
   mutate(
-    income_parents_1log = log(income_parents + 1),
+    income_parents_1log = log1p(income_parents),
     income_parents_rank = rank(income_parents, na.last = "keep", ties.method = "average"),
     income_parents_perc = income_parents_rank / max(income_parents_rank)
   )

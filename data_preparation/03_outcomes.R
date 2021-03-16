@@ -11,6 +11,7 @@
 #### PACKAGES ####
 library(tidyverse)
 library(haven)
+library(lubridate)
 
 #### CONFIGURATION ####
 # load main cohort dataset
@@ -126,7 +127,7 @@ rm(income_children)
 cohort_dat <- 
   cohort_dat %>% 
   mutate(
-    income_1log = log(income + 1),
+    income_1log = log1p(income),
     income_rank = rank(income, na.last = "keep", ties.method = "average"),
     income_perc = income_rank / max(income_rank)
   )
@@ -155,7 +156,102 @@ hopl_tab <-
 
 cohort_dat <- left_join(cohort_dat, hopl_tab)
 
+#### HOURLY INCOME ####
+# these come from the spolis tab
+get_spolis_filename <- function(year) {
+  # function to get latest ipi version of specified year
+  # get all ipi files with the specified year
+  fl <- list.files(
+    path = file.path(loc$data_folder, loc$spolis_data),
+    pattern = paste0("SPOLISBUS", year, "TABV[0-9]+\\.sav"), 
+    full.names = TRUE
+  )
+  # return only the latest version
+  sort(fl, decreasing = TRUE)[1]
+}
 
+# create dataframe with all spolis entries for selected years
+spolis_tab <- tibble(
+  RINPERSOON    = integer(), 
+  hourly_income = double(), 
+  work_hours    = double(), 
+  contract_type = factor()
+)
+
+for (year in seq(as.integer(cfg$child_income_year_min), as.integer(cfg$child_income_year_max))) {
+  spolis_tab <- 
+    # read file from disk
+    read_sav(get_spolis_filename(year), col_select = c("RINPERSOON", "SBASISLOON", "SBASISUREN", "SCONTRACTSOORT")) %>% 
+    rename(
+      hourly_income = SBASISLOON,
+      work_hours    = SBASISUREN,
+      contract_type = SCONTRACTSOORT
+    ) %>% 
+    # select only incomes of children
+    filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
+    # add year
+    mutate(
+      contract_type = as_factor(contract_type),
+      year = year
+    ) %>% 
+    # add to income children
+    bind_rows(spolis_tab, .)
+}
+
+# remove negative and NA incomes
+spolis_tab <-
+  spolis_tab %>% 
+  mutate(hourly_income = ifelse(hourly_income == 9999999999 | hourly_income < 0, NA, hourly_income)) 
+
+# deflate
+spolis_tab <- 
+  spolis_tab %>% 
+  left_join(cpi_tab %>% select(year, cpi), by = "year") %>% 
+  mutate(hourly_income = hourly_income / (cpi / 100)) %>% 
+  select(-cpi)
+
+# compute aggregates
+longest_contract_tab <- 
+  spolis_tab %>% 
+  group_by(RINPERSOON, contract_type) %>% 
+  summarise(total_hours = sum(work_hours, na.rm = TRUE)) %>% 
+  arrange(-total_hours, .by_group = TRUE) %>% 
+  summarise(longest_contract_type = contract_type[1])
+
+# get number of weeks in the used years
+total_weeks <- interval(
+  ymd(paste0(cfg$child_income_year_min, "-01-01")), 
+  ymd(paste0(cfg$child_income_year_max, "-12-31"))
+) / weeks()
+
+income_hours_tab <- 
+  spolis_tab %>% 
+  group_by(RINPERSOON) %>% 
+  summarize(
+    spolis_n       = n(),
+    hourly_income  = weighted.mean(x = hourly_income, w = work_hours, na.rm = TRUE),
+    hours_per_week = sum(work_hours) / total_weeks
+  )
+
+# combine variables
+spolis_tab <- left_join(income_hours_tab, longest_contract_tab)
+
+# compute flex contract dummy
+spolis_tab %>% mutate(flex_contract = ifelse(longest_contract_type == "Bepaalde tijd", 1, 0))
+
+# add to cohort data
+cohort_dat <- left_join(cohort_dat, spolis_tab)
+
+# post-process: compute additional values
+cohort_dat <- 
+  cohort_dat %>% 
+  mutate(
+    has_worked         = ifelse(hours_per_week > 0, 1, 0),
+    hours_per_week_NA0 = replace_na(hours_per_week, 0),
+    hourly_income_1log = log1p(hours_per_week),
+    hourly_income_rank = rank(hourly_income, na.last = "keep", ties.method = "average"),
+    hourly_income_perc = hourly_income_rank / max(hourly_income_rank)
+  )
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
