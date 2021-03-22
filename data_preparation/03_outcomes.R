@@ -159,7 +159,8 @@ cohort_dat <- left_join(cohort_dat, hopl_tab)
 
 #### SOCIOECONOMIC ####
 secm_tab <- 
-  read_sav(file.path(loc$data_folder, loc$secm_data)) %>% 
+  read_sav(file.path(loc$data_folder, loc$secm_data), 
+           col_select = c("RINPERSOONS", "RINPERSOON", "AANVSECM", "EINDSECM", "SECM")) %>% 
   mutate(RINPERSOONS = as_factor(RINPERSOONS))
 
 secm_tab <- 
