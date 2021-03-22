@@ -36,6 +36,11 @@ default:
     #  Child income year range
     child_income_year_min: 2017
     child_income_year_max: 2018
+    
+    # The socio-economic variables from SECMBUS will be measured on this target date
+    secm_ref_date: "31/12/2018"
+    
+    
 
   data_analysis:
     test: "test"
