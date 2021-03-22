@@ -10,7 +10,7 @@
 
 #### PACKAGES ####
 library(tidyverse)
-library(lubricate)
+library(lubridate)
 library(haven)
 
 #### CONFIGURATION ####
