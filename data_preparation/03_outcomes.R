@@ -132,5 +132,23 @@ cohort_dat <-
   )
 
 
+# recode migration background variable
+western_tab <- read_sav("resources/LANDAKTUEELREF10.sav")
+
+cohort_dat <- cohort_dat %>% 
+  left_join(western_tab, by = c("GBAHERKOMSTGROEPERING" = "LANDEN")) %>%
+  rename(migration = LANDTYPE) %>%
+  mutate(migration         = ifelse(GBAHERKOMSTGROEPERING == "Nederland", "Nederland", migration),
+         migration         = ifelse(GBAHERKOMSTGROEPERING == "Turkije", "Turkije", migration),
+         migration         = ifelse(GBAHERKOMSTGROEPERING == "Marokko", "Marokko", migration),
+         migration         = ifelse(GBAHERKOMSTGROEPERING == "Suriname", "Suriname", migration),
+         migration         = ifelse(GBAHERKOMSTGROEPERING == "Nederlandse Antillen (oud)", "Nederlandse Antillen (oud)", migration),
+         total_non_western = ifelse(migration == "NietWesters" |  migration == "Turkije" |
+                                      migration == "Marokko" | migration == "Suriname" | 
+                                      migration == "Nederlandse Antillen (oud)", 1, 0)) # create total non western dummy
+         
+  
+
+
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
