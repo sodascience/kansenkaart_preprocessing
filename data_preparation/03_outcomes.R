@@ -184,7 +184,41 @@ cohort_dat <- left_join(cohort_dat, secm_tab)
 
 
 
+#### HEALTH COSTS ####
+health_tab <- 
+  read_sav(file.path(loc$data_folder, loc$zvwzorgkosten_data),   
+                     col_select =  c("RINPERSOONS", "RINPERSOON", "ZVWKFARMACIE", "ZVWKGENBASGGZ",        
+                                      "ZVWKSPECGGZ", "ZVWKZIEKENHUIS", "ZVWKZIEKENVERVOER", "ZVWKEERSTELIJNSPSYCHO", 
+                                      "ZVWKGERIATRISCH", "ZVWKOPHOOGFACTOR", "ZVWKGEBOORTEZORG", "ZVWKGGZ",              
+                                      "ZVWKWYKVERPLEGING", "ZVWKHUISARTS", "ZVWKPARAMEDISCH", "ZVWKBUITENLAND",     
+                                      "ZVWKHULPMIDDEL", "ZVWKOVERIG", "ZVWKMONDZORG")) %>% 
+  mutate(RINPERSOONS = as_factor(RINPERSOONS)) 
 
+health_tab <- 
+  health_tab %>%
+  mutate_at(names(health_tab %>% select(-c(RINPERSOONS, RINPERSOON))), 
+            function(x) ifelse(x < 0, 0, x)  # replace negative values with 0
+            ) %>%
+  mutate(pharma.costs       = ifelse(ZVWKFARMACIE > 0, 1, 0),
+         basis.ggz.costs    = ifelse(ZVWKGENBASGGZ > 0, 1, 0),
+         specialist.costs   = ifelse(ZVWKSPECGGZ > 0, 1, 0),
+         hospital.costs     = ifelse(ZVWKZIEKENHUIS > 0, 1, 0),
+         total.health.costs = rowSums(health_tab %>% select(-c(RINPERSOONS, RINPERSOON))) # sum of all healthcare costs
+         ) %>%
+  select(RINPERSOONS, RINPERSOON, pharma.costs, basis.ggz.costs, specialist.costs, 
+          hospital.costs, total.health.costs)
+  
 
+cohort_dat <- left_join(cohort_dat, health_tab)
+
+# replace NA with 0 (for those who are not merged with the zvwzorgkostentab)
+cohort_dat <- cohort_dat %>%
+  mutate(pharma.costs       = ifelse(is.na(pharma.costs), 0, pharma.costs),
+         basis.ggz.costs    = ifelse(is.na(basis.ggz.costs), 0, basis.ggz.costs),
+         specialist.costs   = ifelse(is.na(specialist.costs), 0, specialist.costs),
+         hospital.costs     = ifelse(is.na(hospital.costs), 0, hospital.costs),
+         total.health.costs = ifelse(is.na(total.health.costs), 0, total.health.costs))
+  
+  
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
