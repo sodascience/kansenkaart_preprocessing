@@ -13,8 +13,7 @@ library(haven)
 
 # create countries
 tab <- tibble(
-LANDEN = landen <- 
-  c("Nederland", "Turkije", "Marokko", "Suriname", "Nederlandse Antillen (oud)",
+LANDEN = c("Nederland", "Turkije", "Marokko", "Suriname", "Nederlandse Antillen (oud)",
   "Frankrijk", "Zwitserland", "Oostenrijk", "België", "Hongarije", "Cyprus", 
   "Zweden", "IJsland", "Griekenland", "Ierland", "Finland", "Luxemburg",
   "Noorwegen", "Oekraine", "Spanje", "Grootbrittannië", "Duitsland", "Monaco",
