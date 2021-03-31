@@ -39,9 +39,8 @@ default:
     
     # The socio-economic variables from SECMBUS will be measured on this target date
     secm_ref_date: "2018/12/31"
-    secm_ref_date: "2018-12-31"
 
-    
+   
     
 
   data_analysis:
