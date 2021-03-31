@@ -170,14 +170,14 @@ secm_tab <-
     EINDSECM = ymd(EINDSECM)
     ) %>%
   filter(
-    AANVSECM <= cfg$secm_ref_date & EINDSECM >= cfg$secm_ref_date # entry that is still open on 31 dec 2018
+    AANVSECM <= cfg$secm_ref_date & EINDSECM >= cfg$secm_ref_date # entry that is still open on target date
          ) %>% 
   mutate(
     employed = as.integer(SECM %in% c(11, 12, 13, 14)),
     social.benefits = as.integer(SECM == 22),
     disability = as.integer(SECM == 24)
   ) %>%
-  distinct(.keep_all = FALSE) %>% # keep unique records
+  distinct() %>% # keep unique records
   select(-c(AANVSECM, EINDSECM, SECM))
   
 cohort_dat <- left_join(cohort_dat, secm_tab)
