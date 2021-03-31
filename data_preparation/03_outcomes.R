@@ -159,7 +159,8 @@ cohort_dat <- left_join(cohort_dat, hopl_tab)
 
 #### SOCIOECONOMIC ####
 secm_tab <- 
-  read_sav(file.path(loc$data_folder, loc$secm_data)) %>% 
+  read_sav(file.path(loc$data_folder, loc$secm_data), 
+           col_select = c("RINPERSOONS", "RINPERSOON", "AANVSECM", "EINDSECM", "SECM")) %>% 
   mutate(RINPERSOONS = as_factor(RINPERSOONS))
 
 secm_tab <- 
@@ -167,19 +168,20 @@ secm_tab <-
   mutate(
     AANVSECM = ymd(AANVSECM),
     EINDSECM = ymd(EINDSECM)
-  ) %>%
+    ) %>%
   filter(
-    AANVSECM <= cfg$secm_ref_date & EINDSECM >= cfg$secm_ref_date # entry that is still open on 31 dec 2018
-  ) %>% 
+    AANVSECM <= cfg$secm_ref_date & EINDSECM >= cfg$secm_ref_date # entry that is still open on target date
+         ) %>% 
   mutate(
-    employed        = as.integer(SECM %in% c(11, 12, 13, 14)),
+    employed = as.integer(SECM %in% c(11, 12, 13, 14)),
     social.benefits = as.integer(SECM == 22),
-    disability      = as.integer(SECM == 24)
+    disability = as.integer(SECM == 24)
   ) %>%
-  distinct(.keep_all = FALSE) %>% # keep unique records
+  distinct() %>% # keep unique records
   select(-c(AANVSECM, EINDSECM, SECM))
-
+  
 cohort_dat <- left_join(cohort_dat, secm_tab)
+
 
 
 #### HEALTH COSTS ####

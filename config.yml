@@ -39,6 +39,8 @@ default:
     
     # The socio-economic variables from SECMBUS will be measured on this target date
     secm_ref_date: "2018/12/31"
+    secm_ref_date: "2018-12-31"
+
     
     
 
@@ -60,7 +62,7 @@ default:
     hoogste_opl_data: "Onderwijs/HOOGSTEOPLTAB/HOOGSTEOPL2018TABV3.sav"
     secm_data: "InkomenBestedingen/SECMBUS/SECMBUS2018V1.sav"
     zvwzorgkosten_data: "GezondheidWelzijn/ZVWZORGKOSTENTAB/ZVWZORGKOSTEN2017TABV1.sav"
-    
+
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
     
