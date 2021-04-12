@@ -36,6 +36,12 @@ default:
     #  Child income year range
     child_income_year_min: 2017
     child_income_year_max: 2018
+    
+    # The socio-economic variables from SECMBUS will be measured on this target date
+    secm_ref_date: "2018/12/31"
+
+   
+    
 
   data_analysis:
     test: "test"
@@ -52,6 +58,12 @@ default:
     kind_data: "Bevolking/KINDOUDERTAB/KINDOUDER2018TABV1.sav"
     postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2020031.sav"
     vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav"
+    hoogste_opl_data: "Onderwijs/HOOGSTEOPLTAB/HOOGSTEOPL2018TABV3.sav"
+    spolis_data: "Spolis/SPOLISBUS"
+    secm_data: "InkomenBestedingen/SECMBUS/SECMBUS2018V1.sav"
+    zvwzorgkosten_data: "GezondheidWelzijn/ZVWZORGKOSTENTAB/ZVWZORGKOSTEN2017TABV1.sav"
+
+    # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
     
   
