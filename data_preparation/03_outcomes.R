@@ -188,21 +188,21 @@ for (year in seq(as.integer(cfg$child_income_year_min), as.integer(cfg$child_inc
       work_hours    = SBASISUREN,
       contract_type = SCONTRACTSOORT
     ) %>% 
-    # select only incomes of children
+    # select only wages of children
     filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
     # add year
     mutate(
       contract_type = as_factor(contract_type),
       year = year
     ) %>% 
-    # add to income children
+    # add to children wages
     bind_rows(spolis_tab, .)
 }
 
-# remove negative and NA incomes
+# remove negative incomes
 spolis_tab <-
   spolis_tab %>% 
-  mutate(hourly_income = ifelse(hourly_income == 9999999999 | hourly_income < 0, NA, hourly_income)) 
+  mutate(hourly_income = ifelse(hourly_income < 0, NA, hourly_income)) 
 
 # deflate
 spolis_tab <- 
@@ -290,10 +290,10 @@ cohort_dat <- left_join(cohort_dat, secm_tab)
 health_tab <- 
   read_sav(file.path(loc$data_folder, loc$zvwzorgkosten_data),   
                      col_select =  c("RINPERSOONS", "RINPERSOON", "ZVWKFARMACIE", "ZVWKGENBASGGZ",        
-                                      "ZVWKSPECGGZ", "ZVWKZIEKENHUIS", "ZVWKZIEKENVERVOER", "ZVWKEERSTELIJNSPSYCHO", 
-                                      "ZVWKGERIATRISCH", "ZVWKOPHOOGFACTOR", "ZVWKGEBOORTEZORG", "ZVWKGGZ",              
-                                      "ZVWKWYKVERPLEGING", "ZVWKHUISARTS", "ZVWKPARAMEDISCH", "ZVWKBUITENLAND",     
-                                      "ZVWKHULPMIDDEL", "ZVWKOVERIG", "ZVWKMONDZORG")) %>% 
+                                     "ZVWKSPECGGZ", "ZVWKZIEKENHUIS", "ZVWKZIEKENVERVOER", "ZVWKEERSTELIJNSPSYCHO", 
+                                     "ZVWKGERIATRISCH", "ZVWKOPHOOGFACTOR", "ZVWKGEBOORTEZORG", "ZVWKGGZ",              
+                                     "ZVWKWYKVERPLEGING", "ZVWKHUISARTS", "ZVWKPARAMEDISCH", "ZVWKBUITENLAND",     
+                                     "ZVWKHULPMIDDEL", "ZVWKOVERIG", "ZVWKMONDZORG")) %>% 
   mutate(RINPERSOONS = as_factor(RINPERSOONS)) 
 
 health_tab <- 
