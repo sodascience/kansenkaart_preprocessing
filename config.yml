@@ -10,7 +10,7 @@ default:
     
     # The cohort is allowed to be unregistered for this many days 
     # in this period
-    child_live_slack_days: 3
+    child_live_slack_days: 31
     
     # Only cohort children with parents in this age range should be considered
     parent_min_age_at_birth: 15
