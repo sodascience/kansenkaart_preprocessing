@@ -320,7 +320,6 @@ cohort_dat <- cohort_dat %>%
          specialist.costs   = ifelse(is.na(specialist.costs), 0, specialist.costs),
          hospital.costs     = ifelse(is.na(hospital.costs), 0, hospital.costs),
          total.health.costs = ifelse(is.na(total.health.costs), 0, total.health.costs))
-  
-  
+
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
