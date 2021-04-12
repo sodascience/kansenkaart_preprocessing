@@ -216,7 +216,11 @@ longest_contract_tab <-
   spolis_tab %>% 
   group_by(RINPERSOON, contract_type) %>% 
   summarise(total_hours = sum(work_hours, na.rm = TRUE)) %>% 
-  arrange(-total_hours, .by_group = TRUE) %>% 
+  arrange(
+    desc(total_hours),    # most hours contract at top
+    desc(contract_type),  # in case of same hours, prefer "onbepaalde tijd" over "bepaalde tijd"
+    .by_group = TRUE
+  ) %>% 
   summarise(longest_contract_type = contract_type[1])
 
 # get number of weeks in the used years
@@ -230,7 +234,7 @@ income_hours_tab <-
   group_by(RINPERSOON) %>% 
   summarize(
     spolis_n       = n(),
-    hourly_income  = weighted.mean(x = hourly_income, w = work_hours, na.rm = TRUE),
+    hourly_income  = sum(hourly_income, na.rm = TRUE) / sum(work_hours, na.rm = TRUE),
     hours_per_week = sum(work_hours) / total_weeks
   )
 
@@ -253,6 +257,8 @@ cohort_dat <-
     hourly_income_rank = rank(hourly_income, na.last = "keep", ties.method = "average"),
     hourly_income_perc = hourly_income_rank / max(hourly_income_rank)
   )
+
+
 #### SOCIOECONOMIC ####
 secm_tab <- 
   read_sav(file.path(loc$data_folder, loc$secm_data), 
