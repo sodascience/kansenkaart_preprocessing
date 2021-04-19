@@ -24,7 +24,7 @@ loc <- config::get("file_locations")
 #### SELECT COHORT FROM GBA ####
 gba_path <- file.path(loc$data_folder, loc$gba_data)
 gba_dat <-  
-  read_sav(gba_path, col_select = c("RINPERSOON", "GBAGEBOORTELAND", "GBAGESLACHT", 
+  read_sav(gba_path, col_select = c("RINPERSOONS", "RINPERSOON", "GBAGEBOORTELAND", "GBAGESLACHT", 
                                     "GBAGEBOORTEJAAR", "GBAGEBOORTEMAAND", "GBAGEBOORTEDAG", "GBAGENERATIE", 
                                     "GBAHERKOMSTGROEPERING")) %>% 
   mutate(birthdate = ymd(paste(GBAGEBOORTEJAAR, GBAGEBOORTEMAAND, GBAGEBOORTEDAG, sep = "-"))) %>% 
@@ -85,7 +85,7 @@ cohort_dat <-
 kindouder_path <- file.path(loc$data_folder, loc$kind_data)
 cohort_dat <- left_join(
   x = cohort_dat, 
-  y = read_sav(kindouder_path) %>% as_factor(only_labelled = TRUE, levels = "labels"), 
+  y = read_sav(kindouder_path) %>% as_factor(only_labelled = TRUE, levels = "labels") %>% select(-RINPERSOONS),
   by = c("RINPERSOON")
 )
 
@@ -137,8 +137,7 @@ if (cfg$childhood_home_first) {
     mutate(duration = difftime(min(GBADATUMEINDEADRESHOUDING, birthday_cutoff), GBADATUMAANVANGADRESHOUDING)) %>% 
     group_by(RINPERSOON) %>% 
     arrange(-duration, .by_group = TRUE) %>% 
-    summarise(childhood_home = RINOBJECTNUMMER[1],
-              soort_childhood_home = SOORTOBJECTNUMMER[1])
+    summarise(childhood_home = RINOBJECTNUMMER[1])
 }
 
 # add childhood home to data
@@ -147,23 +146,22 @@ cohort_dat <- left_join(cohort_dat, home_tab)
 
 # clean the postcode table
 vslpc_path <- file.path(loc$data_folder, loc$postcode_data)
-vslpc_tab  <- read_sav(vslpc_path) %>% as_factor(only_labelled = TRUE, levels = "labels")
+vslpc_tab  <- read_sav(vslpc_path) 
 
 # only consider postal codes valid on target_date and create postcode-3 level
 vslpc_tab <- 
   vslpc_tab %>% 
   filter(dmy(cfg$postcode_target_date) %within% interval(DATUMAANVPOSTCODENUMADRES, DATUMEINDPOSTCODENUMADRES)) %>% 
   mutate(postcode3 = as.character(floor(as.numeric(POSTCODENUM)/10))) %>% 
-  select(SOORTOBJECTNUMMER, RINOBJECTNUMMER, postcode4 = POSTCODENUM, postcode3)
+  select(RINOBJECTNUMMER, postcode4 = POSTCODENUM, postcode3)
 
 # add the postal codes to the cohort
-cohort_dat <- left_join(cohort_dat, vslpc_tab, by = c("soort_childhood_home" = "SOORTOBJECTNUMMER", 
-                                                      "childhood_home" = "RINOBJECTNUMMER"))
+cohort_dat <- left_join(cohort_dat, vslpc_tab, by = c("childhood_home" = "RINOBJECTNUMMER"))
 
 
 # add region/neighbourhood codes to cohort
 vslgwb_path <- file.path(loc$data_folder, loc$vslgwb_data)
-vslgwb_tab  <- read_sav(vslgwb_path) %>% as_factor(only_labelled = TRUE, levels = "labels")
+vslgwb_tab  <- read_sav(vslgwb_path) 
 
 # select region/neighbourhood from the target date
 vslgwb_tab <- 
