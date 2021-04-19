@@ -150,7 +150,7 @@ cohort_dat <-
 
 
 #### MIGRATION BACKGROUND ####
-western_tab <- read_sav("resources/LANDAKTUEELREF10.sav")
+western_tab <- read_sav(loc$migration_data)
 
 cohort_dat <- cohort_dat %>% 
   left_join(western_tab, by = c("GBAHERKOMSTGROEPERING" = "LANDEN")) %>%
