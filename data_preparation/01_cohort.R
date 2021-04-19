@@ -24,7 +24,7 @@ loc <- config::get("file_locations")
 #### SELECT COHORT FROM GBA ####
 gba_path <- file.path(loc$data_folder, loc$gba_data)
 gba_dat <-  
-  read_sav(gba_path, col_select = c("RINPERSOON", "RINPERSOONS", "GBAGEBOORTELAND", "GBAGESLACHT", 
+  read_sav(gba_path, col_select = c("RINPERSOON", "GBAGEBOORTELAND", "GBAGESLACHT", 
                                     "GBAGEBOORTEJAAR", "GBAGEBOORTEMAAND", "GBAGEBOORTEDAG", "GBAGENERATIE", 
                                     "GBAHERKOMSTGROEPERING")) %>% 
   mutate(birthdate = ymd(paste(GBAGEBOORTEJAAR, GBAGEBOORTEMAAND, GBAGEBOORTEDAG, sep = "-"))) %>% 
@@ -86,17 +86,17 @@ kindouder_path <- file.path(loc$data_folder, loc$kind_data)
 cohort_dat <- left_join(
   x = cohort_dat, 
   y = read_sav(kindouder_path) %>% as_factor(only_labelled = TRUE, levels = "labels"), 
-  by = c("RINPERSOONS", "RINPERSOON")
+  by = c("RINPERSOON")
 )
 
 # add parents birth dates to cohort
 cohort_dat <- 
   cohort_dat %>% 
-  left_join(gba_dat %>% select(RINPERSOONS, RINPERSOON, birthdate),
-            by = c("RINPERSOONSMa" = "RINPERSOONS", "RINPERSOONMa" = "RINPERSOON"),
+  left_join(gba_dat %>% select(RINPERSOON, birthdate),
+            by = c("RINPERSOONMa" = "RINPERSOON"),
             suffix = c("", "_ma")) %>%
-  left_join(gba_dat %>% select(RINPERSOONS, RINPERSOON, birthdate), 
-            by = c("RINPERSOONSpa" = "RINPERSOONS", "RINPERSOONpa" = "RINPERSOON"), 
+  left_join(gba_dat %>% select(RINPERSOON, birthdate), 
+            by = c("RINPERSOONpa" = "RINPERSOON"), 
             suffix = c("", "_pa"))
 
 # filter out children with too old or too young parents
@@ -123,20 +123,19 @@ if (cfg$childhood_home_first) {
   # take the first address registration to be their childhood home
   home_tab <- 
     adres_tab %>% 
-    filter(RINPERSOON %in% cohort_dat$RINPERSOON & RINPERSOONS %in% cohort_dat$RINPERSOONS) %>% 
+    filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
     arrange(GBADATUMAANVANGADRESHOUDING) %>% 
-    group_by(RINPERSOONS, RINPERSOON) %>% 
-    summarise(childhood_home = RINOBJECTNUMMER[1],
-              soort_childhood_home = SOORTOBJECTNUMMER[1])
+    group_by(RINPERSOON) %>% 
+    summarise(childhood_home = RINOBJECTNUMMER[1])
 } else {
   # for each person, throw out the registrations from after they are 18 and select the longest-registered address from 0
   # to 18
   home_tab <- 
-    inner_join(adres_tab, cohort_dat %>% select(RINPERSOON, RINPERSOONS, birthdate)) %>% 
+    inner_join(adres_tab, cohort_dat %>% select(RINPERSOON, birthdate)) %>% 
     mutate(birthday_cutoff = birthdate + years(cfg$childhood_home_cutoff_year)) %>% 
     filter(GBADATUMAANVANGADRESHOUDING %within% interval(birthdate, birthday_cutoff)) %>% 
     mutate(duration = difftime(min(GBADATUMEINDEADRESHOUDING, birthday_cutoff), GBADATUMAANVANGADRESHOUDING)) %>% 
-    group_by(RINPERSOONS, RINPERSOON) %>% 
+    group_by(RINPERSOON) %>% 
     arrange(-duration, .by_group = TRUE) %>% 
     summarise(childhood_home = RINOBJECTNUMMER[1],
               soort_childhood_home = SOORTOBJECTNUMMER[1])
