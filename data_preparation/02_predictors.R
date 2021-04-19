@@ -102,6 +102,11 @@ income_parents <-
   income_parents %>% 
   mutate(income = ifelse(income == 9999999999 | income < 0, NA, income)) 
 
+# censor income above 1.2 milion
+income_parents <-
+  income_parents %>%
+  mutate(income = ifelse(income > 1200000, 1200000, income))
+
 # deflate
 income_parents <- 
   income_parents %>% 
@@ -132,11 +137,16 @@ cohort_dat <- left_join(
   y = income_parents %>% rename(income_pa = income, income_n_pa = income_n), 
   by = c("RINPERSOONpa" = "RINPERSOON")
 )
+
 # parents
 cohort_dat <- cohort_dat %>% mutate(income_parents = income_ma + income_pa)
 
 # free up memory
 rm(income_parents)
+
+# remove income if income_parents is NA (parents income is NA is all years)
+cohort_dat <- cohort_dat %>%
+  filter(!is.na(income_parents))
 
 # compute income transformations
 cohort_dat <- 
