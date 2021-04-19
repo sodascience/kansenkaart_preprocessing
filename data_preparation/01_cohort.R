@@ -164,7 +164,7 @@ cohort_dat <- left_join(cohort_dat, vslpc_tab, by = c("soort_childhood_home" = "
 
 # add region/neighbourhood codes to cohort
 vslgwb_path <- file.path(loc$data_folder, loc$vslgwb_data)
-vslgwb_tab  <- read_sav(vslgwb_path)
+vslgwb_tab  <- read_sav(vslgwb_path) %>% as_factor(only_labelled = TRUE, levels = "labels")
 
 # select region/neighbourhood from the target date
 vslgwb_tab <- 
@@ -177,7 +177,7 @@ vslgwb_tab <-
 cohort_dat <- left_join(cohort_dat, vslgwb_tab)
 
 # add corop regions
-corop_tab  <- read_excel("resources/Gemeenten en COROP vanaf 1981.xlsx") %>%
+corop_tab  <- read_excel(loc$corop_data) %>%
   select("gemeente_code" = paste0("GM", year(dmy(cfg$gwb_target_date))), 
          "corop_code" = paste0("COROP", year(dmy(cfg$gwb_target_date))))
 

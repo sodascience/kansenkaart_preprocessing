@@ -66,6 +66,7 @@ default:
 
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
+    corop_data: "resources/Gemeenten en COROP vanaf 1981.xlsx"
     
   
 
