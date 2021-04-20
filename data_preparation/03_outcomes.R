@@ -101,6 +101,11 @@ income_children <-
   income_children %>% 
   mutate(income = ifelse(income == 9999999999 | income < 0, NA, income)) 
 
+# censor income above 1.2 milion
+income_children <-
+  income_children %>%
+  mutate(income = ifelse(income > 1200000, 1200000, income))
+
 # deflate
 income_children <- 
   income_children %>% 
@@ -124,6 +129,10 @@ cohort_dat <- left_join(cohort_dat, income_children, by = "RINPERSOON")
 # free up memory
 rm(income_children)
 
+# remove income if income is NA 
+cohort_dat <- cohort_dat %>%
+  filter(!is.na(income))
+
 # compute income transformations
 cohort_dat <- 
   cohort_dat %>% 
@@ -136,7 +145,7 @@ cohort_dat <-
 #### HIGHER EDUCATION ####
 hopl_tab <- 
   read_sav(file.path(loc$data_folder, loc$hoogste_opl_data)) %>% 
-  mutate(RINPERSOONS = as_factor(RINPERSOONS))
+  select(c(RINPERSOON, OPLNIVSOI2016AGG4HBMETNIRWO, OPLNIVSOI2016AGG4HGMETNIRWO))
 
 hopl_tab <-
   hopl_tab %>% 
@@ -262,8 +271,7 @@ cohort_dat <-
 #### SOCIOECONOMIC ####
 secm_tab <- 
   read_sav(file.path(loc$data_folder, loc$secm_data), 
-           col_select = c("RINPERSOONS", "RINPERSOON", "AANVSECM", "EINDSECM", "SECM")) %>% 
-  mutate(RINPERSOONS = as_factor(RINPERSOONS))
+           col_select = c("RINPERSOON", "AANVSECM", "EINDSECM", "SECM"))
 
 secm_tab <- 
   secm_tab %>%
@@ -293,8 +301,7 @@ health_tab <-
                                      "ZVWKSPECGGZ", "ZVWKZIEKENHUIS", "ZVWKZIEKENVERVOER", "ZVWKEERSTELIJNSPSYCHO", 
                                      "ZVWKGERIATRISCH", "ZVWKOPHOOGFACTOR", "ZVWKGEBOORTEZORG", "ZVWKGGZ",              
                                      "ZVWKWYKVERPLEGING", "ZVWKHUISARTS", "ZVWKPARAMEDISCH", "ZVWKBUITENLAND",     
-                                     "ZVWKHULPMIDDEL", "ZVWKOVERIG", "ZVWKMONDZORG")) %>% 
-  mutate(RINPERSOONS = as_factor(RINPERSOONS)) 
+                                     "ZVWKHULPMIDDEL", "ZVWKOVERIG", "ZVWKMONDZORG")) 
 
 health_tab <- 
   health_tab %>%
@@ -307,7 +314,7 @@ health_tab <-
          hospital.costs     = ifelse(ZVWKZIEKENHUIS > 0, 1, 0),
          total.health.costs = rowSums(health_tab %>% select(-c(RINPERSOONS, RINPERSOON))) # sum of all healthcare costs
          ) %>%
-  select(RINPERSOONS, RINPERSOON, pharma.costs, basis.ggz.costs, specialist.costs, 
+  select(RINPERSOON, pharma.costs, basis.ggz.costs, specialist.costs, 
           hospital.costs, total.health.costs)
   
 
@@ -323,3 +330,5 @@ cohort_dat <- cohort_dat %>%
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
+
+
