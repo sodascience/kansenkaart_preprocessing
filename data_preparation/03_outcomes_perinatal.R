@@ -25,13 +25,17 @@ loc <- config::get("file_locations")
 
 # import percentile weight boys & girls
 boys_weight_tab <- read_excel(loc$boys_weight_data) %>%
-  rename(gestational_age = zwangerschapsduur,
-         perc_10_boys = "0.1_percentile") %>%
+  rename(
+    gestational_age = zwangerschapsduur,
+    perc_10_boys = "0.1_percentile"
+    ) %>%
   select(c(gestational_age, perc_10_boys))
 
 girls_weight_tab <- read_excel(loc$girls_weight_data) %>%
-  rename(gestational_age = zwangerschapsduur,
-         perc_10_girls = "0.1_percentile") %>%
+  rename(
+    gestational_age = zwangerschapsduur,
+    perc_10_girls = "0.1_percentile"
+    ) %>%
   select(c(gestational_age, perc_10_girls))
 
 
@@ -79,7 +83,11 @@ perined_dat <- rbind(CleanPerinatal(loc$prnl_data_2008), CleanPerinatal(loc$prnl
 
 
 
+cohort_dat <- left_join(cohort_dat, perined_dat, by = c("RINPERSOON" = "RINPERSOON_KIND"))
 
+
+#### WRITE OUTPUT TO SCRATCH ####
+write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
 
 
 

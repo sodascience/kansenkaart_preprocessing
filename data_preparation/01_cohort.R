@@ -117,6 +117,25 @@ if (cfg$childhood_home_first) {
     arrange(GBADATUMAANVANGADRESHOUDING) %>% 
     group_by(RINPERSOON) %>% 
     summarise(childhood_home = RINOBJECTNUMMER[1])
+  
+  # take the address registration to be their childhood home at 31 december of the year of birth
+} else if (cfg$childhood_home_birthyear) {
+  home_tab <- 
+    adres_tab %>% 
+    filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
+    mutate(
+      birth_year = format(GBADATUMAANVANGADRESHOUDING, "%Y"),
+      dec_year = ymd(paste(format(GBADATUMAANVANGADRESHOUDING, "%Y"), "1231")),
+      birth_year = ifelse(GBADATUMEINDEADRESHOUDING < dec_year, NA, birth_year) # take home registrations that are still open at 31 december
+    ) %>%
+    select(-(dec_year)) %>%
+    group_by(RINPERSOON, birth_year) %>% 
+    summarise(childhood_home = RINOBJECTNUMMER[1])
+  
+  # create birth_year variable to link home addresses at year of birth 
+  cohort_dat <- cohort_dat %>%
+    mutate(birth_year = format(birthdate, "%Y")) 
+  
 } else {
   # for each person, throw out the registrations from after they are 18 and select the longest-registered address from 0
   # to 18
@@ -132,7 +151,6 @@ if (cfg$childhood_home_first) {
 
 # add childhood home to data
 cohort_dat <- left_join(cohort_dat, home_tab)
-
 
 # clean the postcode table
 vslpc_path <- file.path(loc$data_folder, loc$postcode_data)

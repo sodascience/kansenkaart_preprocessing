@@ -323,3 +323,4 @@ cohort_dat <- cohort_dat %>%
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
+
