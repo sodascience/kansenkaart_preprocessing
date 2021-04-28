@@ -1,11 +1,10 @@
 default:
   data_preparation:
     # Child birth date filters the cohort by age
-    child_birth_date_min: "01/01/2008"
-    child_birth_date_max: "31/12/2016"
+    child_birth_date_min: "01/01/1982"
+    child_birth_date_max: "31/12/1987"
     
     # The cohort should live continuously in NL in the following period
-    live_continuously: false
     child_live_start: "01/01/2014"
     child_live_end: "31/12/2018"
     
@@ -18,11 +17,7 @@ default:
     parent_max_age_at_birth: 50
     
     # Should we use the first address registration of a child as their childhood home?
-    childhood_home_first: false
-    
-    # Should we use the first address registration of a child at 31 december of the year of birth?
-    childhood_home_birthyear: true
-    
+    childhood_home_first: true
     # If we do not, then use the longest address registration before cutoff_year:
     childhood_home_cutoff_year: 18
     
@@ -35,8 +30,18 @@ default:
     cpi_base_year: 2018
     
     # Parent income year range
-    parent_income_year_min: 2014
-    parent_income_year_max: 2018
+    parent_income_year_min: 2006
+    parent_income_year_max: 2010
+    
+    #  Child income year range
+    child_income_year_min: 2017
+    child_income_year_max: 2018
+    
+    # The socio-economic variables from SECMBUS will be measured on this target date
+    secm_ref_date: "2018/12/31"
+
+   
+    
 
   data_analysis:
     test: "test"
@@ -53,21 +58,13 @@ default:
     kind_data: "Bevolking/KINDOUDERTAB/KINDOUDER2018TABV1.sav"
     postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2020031.sav"
     vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav"
-    prnl_data_2008: "GezondheidWelzijn/PRNL/130822 PRN 2008V2.sav"
-    prnl_data_2009: "GezondheidWelzijn/PRNL/130822 PRN 2009V2.sav"
-    prnl_data_2010: "GezondheidWelzijn/PRNL/140127 PRN 2010V1.sav"
-    prnl_data_2011: "GezondheidWelzijn/PRNL/140630 PRN 2011V1.sav"
-    prnl_data_2012: "GezondheidWelzijn/PRNL/140630 PRN 2012V1.sav"
-    prnl_data_2013: "GezondheidWelzijn/PRNL/PRN 2013V1.sav"
-    prnl_data_2014: "GezondheidWelzijn/PRNL/PRN 2014V2.sav"
-    prnl_data_2015: "GezondheidWelzijn/PRNL/PRN 2015V1.sav"
-    prnl_data_2016: "GezondheidWelzijn/PRNL/PRN 2016V1.sav"
-    
+    hoogste_opl_data: "Onderwijs/HOOGSTEOPLTAB/HOOGSTEOPL2018TABV3.sav"
+    spolis_data: "Spolis/SPOLISBUS"
+    secm_data: "InkomenBestedingen/SECMBUS/SECMBUS2018V1.sav"
+    zvwzorgkosten_data: "GezondheidWelzijn/ZVWZORGKOSTENTAB/ZVWZORGKOSTEN2017TABV1.sav"
 
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
-    boys_weight_data: "resources/Percentielen - Jongens.xlsx"
-    girls_weight_data: "resources/Percentielen - Meisjes.xlsx"
     
   
 

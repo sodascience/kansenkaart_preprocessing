@@ -25,26 +25,39 @@ loc <- config::get("file_locations")
 
 # import percentile weight boys & girls
 boys_weight_tab <- read_excel(loc$boys_weight_data) %>%
-  rename(
+  dplyr::rename(
     gestational_age = zwangerschapsduur,
     perc_10_boys = "0.1_percentile"
     ) %>%
   select(c(gestational_age, perc_10_boys))
 
 girls_weight_tab <- read_excel(loc$girls_weight_data) %>%
-  rename(
+  dplyr::rename(
     gestational_age = zwangerschapsduur,
     perc_10_girls = "0.1_percentile"
     ) %>%
   select(c(gestational_age, perc_10_girls))
 
 
+# function to get latest perined version of specified year
+get_prnl_filename <- function(year) {
+
+  fl <- list.files(
+    path = file.path(loc$data_folder, "GezondheidWelzijn/PRNL"),
+    pattern = paste0("PRN\\s", year, "V\\d{1}.sav"),
+    full.names = TRUE
+    )
+  
+  # return only the latest version
+  sort(fl, decreasing = TRUE)[1]
+  
+}
+
+
 # create function for cleaning the perinatal data
-CleanPerinatal <- function(file) {
+CleanPerinatal <- function(file_name) {
 
-  path = file.path(loc$data_folder, loc$prnl_data_2009)
-
-  prnl_tab <- read_sav(path) %>% 
+  prnl_tab <- read_sav(file_name) %>% 
     select(c("RINPERSOONS_KIND_UITGEBREID", "RINPERSOON_KIND",
              "Gewichtkind_ruw", "Amddd", "Geslachtkind")) %>%
     left_join(boys_weight_tab, by = c("Amddd" = "gestational_age")) %>%
@@ -75,12 +88,27 @@ CleanPerinatal <- function(file) {
 
 }
 
-perined_dat <- rbind(CleanPerinatal(loc$prnl_data_2008), CleanPerinatal(loc$prnl_data_2009), 
-                     CleanPerinatal(loc$prnl_data_2010), CleanPerinatal(loc$prnl_data_2011),
-                     CleanPerinatal(loc$prnl_data_2012), CleanPerinatal(loc$prnl_data_2013),
-                     CleanPerinatal(loc$prnl_data_2014), CleanPerinatal(loc$prnl_data_2015),
-                     CleanPerinatal(loc$prnl_data_2016))
+# load perined data 
+perined_dat <- tibble(
+  RINPERSOONS_KIND_UITGEBREID = character(),
+  RINPERSOON_KIND = integer(),
+  Gewichtkind_ruw = double(),
+  Amddd = double(),
+  Geslachtkind = double(),
+  perc_10_boys = double(),
+  perc_10_girls = double(),
+  low_birthweight = integer(),
+  premature_birth = integer(),
+)
 
+for (year in seq(format(dmy(cfg$child_birth_date_min), "%Y"), format(dmy(cfg$child_birth_date_max), "%Y"))){
+  
+  perined_dat <- CleanPerinatal(get_prnl_filename(year)) %>% 
+    # add year
+    mutate(year = year) %>%
+    bind_rows(perined_dat, .)
+
+}
 
 
 cohort_dat <- left_join(cohort_dat, perined_dat, by = c("RINPERSOON" = "RINPERSOON_KIND"))
@@ -91,5 +119,13 @@ write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
 
 
 
-
+# prnl_data_2008: "GezondheidWelzijn/PRNL/130822 PRN 2008V2.sav"
+# prnl_data_2009: "GezondheidWelzijn/PRNL/130822 PRN 2009V2.sav"
+# prnl_data_2010: "GezondheidWelzijn/PRNL/140127 PRN 2010V1.sav"
+# prnl_data_2011: "GezondheidWelzijn/PRNL/140630 PRN 2011V1.sav"
+# prnl_data_2012: "GezondheidWelzijn/PRNL/140630 PRN 2012V1.sav"
+# prnl_data_2013: "GezondheidWelzijn/PRNL/PRN 2013V1.sav"
+# prnl_data_2014: "GezondheidWelzijn/PRNL/PRN 2014V2.sav"
+# prnl_data_2015: "GezondheidWelzijn/PRNL/PRN 2015V1.sav"
+# prnl_data_2016: "GezondheidWelzijn/PRNL/PRN 2016V1.sav"
 
