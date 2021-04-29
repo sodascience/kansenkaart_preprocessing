@@ -42,8 +42,7 @@ default:
     secm_ref_date: "2018/12/31"
 
    
-    
-
+  
   data_analysis:
     test: "test"
     
@@ -66,7 +65,7 @@ default:
 
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
-    corop_data: "resources/Gemeenten en COROP vanaf 1981.xlsx"
+    corop_data: "resources/gemeenten_corop_1981.xlsx"
     
   
 
