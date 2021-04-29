@@ -67,14 +67,16 @@ get_inpa_filename <- function(year) {
 }
 
 
-income_children <- tibble(RINPERSOON = integer(), income = double(), year = integer())
+income_children <- tibble(RINPERSOONS = factor(), RINPERSOON = integer(), 
+                          income = double(), year = integer())
 for (year in seq(as.integer(cfg$child_income_year_min), as.integer(cfg$child_income_year_max))) {
   if (year < 2011) {
     # use IPI tab
     income_children <- 
       # read file from disk
-      read_sav(get_ipi_filename(year), col_select = c("RINPERSOON", "PERSBRUT")) %>% 
+      read_sav(get_ipi_filename(year), col_select = c("RINPERSOONS", "RINPERSOON", "PERSBRUT")) %>% 
       rename(income = PERSBRUT) %>% 
+      mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value")) %>%
       # select only incomes of children
       filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
       # add year
@@ -85,8 +87,9 @@ for (year in seq(as.integer(cfg$child_income_year_min), as.integer(cfg$child_inc
     # use INPA tab
     income_children <- 
       # read file from disk
-      read_sav(get_inpa_filename(year), col_select = c("RINPERSOON", "INPPERSBRUT")) %>% 
+      read_sav(get_inpa_filename(year), col_select = c("RINPERSOONS", "RINPERSOON", "INPPERSBRUT")) %>% 
       rename(income = INPPERSBRUT) %>% 
+      mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value")) %>%
       # select only incomes of children
       filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
       # add year
@@ -101,6 +104,11 @@ income_children <-
   income_children %>% 
   mutate(income = ifelse(income == 9999999999 | income < 0, NA, income)) 
 
+# censor income above a certain value
+income_children <-
+  income_children %>%
+  mutate(income = ifelse(income > cfg$income_censoring_value, cfg$income_censoring_value, income))
+
 # deflate
 income_children <- 
   income_children %>% 
@@ -111,7 +119,7 @@ income_children <-
 # compute mean
 income_children <- 
   income_children %>% 
-  group_by(RINPERSOON) %>% 
+  group_by(RINPERSOONS, RINPERSOON) %>% 
   summarize(income_n = sum(!is.na(income)),
             income = mean(income, na.rm = TRUE))
 
@@ -119,10 +127,14 @@ income_children <-
 print(table(`income years` = income_children$income_n))
 
 # add to data
-cohort_dat <- left_join(cohort_dat, income_children, by = "RINPERSOON")
+cohort_dat <- left_join(cohort_dat, income_children, by = c("RINPERSOONS", "RINPERSOON"))
 
 # free up memory
 rm(income_children)
+
+# remove income if income is NA 
+cohort_dat <- cohort_dat %>%
+  filter(!is.na(income))
 
 # compute income transformations
 cohort_dat <- 
@@ -136,7 +148,9 @@ cohort_dat <-
 #### HIGHER EDUCATION ####
 hopl_tab <- 
   read_sav(file.path(loc$data_folder, loc$hoogste_opl_data)) %>% 
-  mutate(RINPERSOONS = as_factor(RINPERSOONS))
+  select(c(RINPERSOONS, RINPERSOON, OPLNIVSOI2016AGG4HBMETNIRWO, OPLNIVSOI2016AGG4HGMETNIRWO)) %>%
+  mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value")) 
+  
 
 hopl_tab <-
   hopl_tab %>% 
@@ -157,6 +171,7 @@ hopl_tab <-
 
 cohort_dat <- left_join(cohort_dat, hopl_tab)
 
+
 #### HOURLY INCOME ####
 # these come from the spolis tab
 get_spolis_filename <- function(year) {
@@ -173,6 +188,7 @@ get_spolis_filename <- function(year) {
 
 # create dataframe with all spolis entries for selected years
 spolis_tab <- tibble(
+  RINPERSOONS   = factor(),
   RINPERSOON    = integer(), 
   hourly_income = double(), 
   work_hours    = double(), 
@@ -182,7 +198,8 @@ spolis_tab <- tibble(
 for (year in seq(as.integer(cfg$child_income_year_min), as.integer(cfg$child_income_year_max))) {
   spolis_tab <- 
     # read file from disk
-    read_sav(get_spolis_filename(year), col_select = c("RINPERSOON", "SBASISLOON", "SBASISUREN", "SCONTRACTSOORT")) %>% 
+    read_sav(get_spolis_filename(year), 
+             col_select = c("RINPERSOONS", "RINPERSOON", "SBASISLOON", "SBASISUREN", "SCONTRACTSOORT")) %>% 
     rename(
       hourly_income = SBASISLOON,
       work_hours    = SBASISUREN,
@@ -193,7 +210,8 @@ for (year in seq(as.integer(cfg$child_income_year_min), as.integer(cfg$child_inc
     # add year
     mutate(
       contract_type = as_factor(contract_type),
-      year = year
+      year = year,
+      RINPERSOONS = as_factor(RINPERSOONS, levels = "value")
     ) %>% 
     # add to children wages
     bind_rows(spolis_tab, .)
@@ -214,7 +232,7 @@ spolis_tab <-
 # compute aggregates
 longest_contract_tab <- 
   spolis_tab %>% 
-  group_by(RINPERSOON, contract_type) %>% 
+  group_by(RINPERSOONS, RINPERSOON, contract_type) %>% 
   summarise(total_hours = sum(work_hours, na.rm = TRUE)) %>% 
   arrange(
     desc(total_hours),    # most hours contract at top
@@ -231,7 +249,7 @@ total_weeks <- interval(
 
 income_hours_tab <- 
   spolis_tab %>% 
-  group_by(RINPERSOON) %>% 
+  group_by(RINPERSOONS, RINPERSOON) %>% 
   summarize(
     spolis_n       = n(),
     hourly_income  = sum(hourly_income, na.rm = TRUE) / sum(work_hours, na.rm = TRUE),
@@ -262,8 +280,8 @@ cohort_dat <-
 #### SOCIOECONOMIC ####
 secm_tab <- 
   read_sav(file.path(loc$data_folder, loc$secm_data), 
-           col_select = c("RINPERSOONS", "RINPERSOON", "AANVSECM", "EINDSECM", "SECM")) %>% 
-  mutate(RINPERSOONS = as_factor(RINPERSOONS))
+           col_select = c("RINPERSOONS", "RINPERSOON", "AANVSECM", "EINDSECM", "SECM")) %>%
+  as_factor(only_labelled = TRUE, levels = "values")
 
 secm_tab <- 
   secm_tab %>%
@@ -275,8 +293,16 @@ secm_tab <-
     AANVSECM <= cfg$secm_ref_date & EINDSECM >= cfg$secm_ref_date # entry that is still open on target date
          ) %>% 
   mutate(
+    # 11  = Werknemer
+    # 12  = Directeur-grootaandeelhouder
+    # 13  = Zelfstandig ondernemer
+    # 14  = Overige zelfstandige
     employed = as.integer(SECM %in% c(11, 12, 13, 14)),
+    
+    # 22 =  Ontvanger bijstandsuitkering
     social.benefits = as.integer(SECM == 22),
+    
+    # 24  = Ontvanger uitkering ziekte/AO
     disability = as.integer(SECM == 24)
   ) %>%
   distinct() %>% # keep unique records
@@ -293,8 +319,8 @@ health_tab <-
                                      "ZVWKSPECGGZ", "ZVWKZIEKENHUIS", "ZVWKZIEKENVERVOER", "ZVWKEERSTELIJNSPSYCHO", 
                                      "ZVWKGERIATRISCH", "ZVWKOPHOOGFACTOR", "ZVWKGEBOORTEZORG", "ZVWKGGZ",              
                                      "ZVWKWYKVERPLEGING", "ZVWKHUISARTS", "ZVWKPARAMEDISCH", "ZVWKBUITENLAND",     
-                                     "ZVWKHULPMIDDEL", "ZVWKOVERIG", "ZVWKMONDZORG")) %>% 
-  mutate(RINPERSOONS = as_factor(RINPERSOONS)) 
+                                     "ZVWKHULPMIDDEL", "ZVWKOVERIG", "ZVWKMONDZORG")) %>%
+  as_factor(only_labelled = TRUE, levels = "values")
 
 health_tab <- 
   health_tab %>%
@@ -323,3 +349,5 @@ cohort_dat <- cohort_dat %>%
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
+
+
