@@ -66,16 +66,19 @@ get_inpa_filename <- function(year) {
   sort(fl, decreasing = TRUE)[1]
 }
 
-parents <- c(cohort_dat$RINPERSOONMa, cohort_dat$RINPERSOONpa)
+parents <- c(cohort_dat$RINPERSOONMa, cohort_dat$RINPERSOONSMa, 
+             cohort_dat$RINPERSOONpa, cohort_dat$RINPERSOONSpa)
 
-income_parents <- tibble(RINPERSOON = integer(), income = double(), year = integer())
+income_parents <- tibble(RINPERSOONS = factor(), RINPERSOON = integer(), 
+                         income = double(), year = integer())
 for (year in seq(as.integer(cfg$parent_income_year_min), as.integer(cfg$parent_income_year_max))) {
   if (year < 2011) {
     # use IPI tab
     income_parents <- 
       # read file from disk
-      read_sav(get_ipi_filename(year), col_select = c("RINPERSOON", "PERSBRUT")) %>% 
+      read_sav(get_ipi_filename(year), col_select = c("RINPERSOONS", "RINPERSOON", "PERSBRUT")) %>% 
       rename(income = PERSBRUT) %>% 
+      mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value")) %>%
       # select only incomes of parents
       filter(RINPERSOON %in% parents) %>% 
       # add year
@@ -86,8 +89,9 @@ for (year in seq(as.integer(cfg$parent_income_year_min), as.integer(cfg$parent_i
     # use INPA tab
     income_parents <- 
       # read file from disk
-      read_sav(get_inpa_filename(year), col_select = c("RINPERSOON", "INPPERSBRUT")) %>% 
+      read_sav(get_inpa_filename(year), col_select = c("RINPERSOONS", "RINPERSOON", "INPPERSBRUT")) %>% 
       rename(income = INPPERSBRUT) %>% 
+      mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value")) %>%
       # select only incomes of parents
       filter(RINPERSOON %in% parents) %>% 
       # add year
@@ -102,6 +106,11 @@ income_parents <-
   income_parents %>% 
   mutate(income = ifelse(income == 9999999999 | income < 0, NA, income)) 
 
+# censor income above a certain value
+income_parents <-
+  income_parents %>%
+  mutate(income = ifelse(income > cfg$income_censoring_value, cfg$income_censoring_value, income))
+
 # deflate
 income_parents <- 
   income_parents %>% 
@@ -112,9 +121,9 @@ income_parents <-
 # compute mean
 income_parents <- 
   income_parents %>% 
-  group_by(RINPERSOON) %>% 
+  group_by(RINPERSOON, RINPERSOONS) %>% 
   summarize(income_n = sum(!is.na(income)),
-            income   = mean(income, na.rm = TRUE))
+            income   = mean(income, na.rm = TRUE)) 
 
 # table of the number of years the mean income is based on
 print(table(`income years` = income_parents$income_n))
@@ -124,19 +133,24 @@ print(table(`income years` = income_parents$income_n))
 cohort_dat <- left_join(
   x = cohort_dat, 
   y = income_parents %>% rename(income_ma = income, income_n_ma = income_n), 
-  by = c("RINPERSOONMa" = "RINPERSOON")
+  by = c("RINPERSOONMa" = "RINPERSOON", "RINPERSOONSMa" = "RINPERSOONS")
 )
 # fathers
 cohort_dat <- left_join(
   x = cohort_dat, 
   y = income_parents %>% rename(income_pa = income, income_n_pa = income_n), 
-  by = c("RINPERSOONpa" = "RINPERSOON")
+  by = c("RINPERSOONpa" = "RINPERSOON", "RINPERSOONSpa" = "RINPERSOONS")
 )
+
 # parents
 cohort_dat <- cohort_dat %>% mutate(income_parents = income_ma + income_pa)
 
 # free up memory
 rm(income_parents)
+
+# remove income if income_parents is NA (parents income is NA is all years)
+cohort_dat <- cohort_dat %>%
+  filter(!is.na(income_parents))
 
 # compute income transformations
 cohort_dat <- 
@@ -150,9 +164,10 @@ cohort_dat <-
 
 
 #### MIGRATION BACKGROUND ####
-western_tab <- read_sav("resources/LANDAKTUEELREF10.sav")
+western_tab <- read_sav(loc$migration_data)
 
 cohort_dat <- cohort_dat %>% 
+  # mutate(GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels")) %>%
   left_join(western_tab, by = c("GBAHERKOMSTGROEPERING" = "LANDEN")) %>%
   rename(migration = LANDTYPE) %>%
   mutate(migration         = ifelse(GBAHERKOMSTGROEPERING == "Nederland", "Nederland", migration),
