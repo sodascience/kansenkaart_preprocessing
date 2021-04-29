@@ -188,4 +188,3 @@ cohort_dat <- left_join(cohort_dat, corop_tab)
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "01_cohort.rds"))
-
