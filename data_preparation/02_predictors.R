@@ -69,7 +69,8 @@ get_inpa_filename <- function(year) {
 parents <- c(cohort_dat$RINPERSOONMa, cohort_dat$RINPERSOONSMa, 
              cohort_dat$RINPERSOONpa, cohort_dat$RINPERSOONSpa)
 
-income_parents <- tibble(RINPERSOON = integer(), income = double(), year = integer())
+income_parents <- tibble(RINPERSOONS = factor(), RINPERSOON = integer(), 
+                         income = double(), year = integer())
 for (year in seq(as.integer(cfg$parent_income_year_min), as.integer(cfg$parent_income_year_max))) {
   if (year < 2011) {
     # use IPI tab
