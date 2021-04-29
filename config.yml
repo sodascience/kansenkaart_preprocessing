@@ -43,8 +43,9 @@ default:
 
     # censor income above this value
     income_censoring_value: 1200000
-    
 
+   
+  
   data_analysis:
     test: "test"
     
@@ -67,6 +68,9 @@ default:
 
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
+    migration_data: "resources/LANDAKTUEELREF10.sav"
+    corop_data: "resources/gemeenten_corop_1981.xlsx"
+
     
   
 
