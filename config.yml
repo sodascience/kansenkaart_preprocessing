@@ -5,6 +5,7 @@ default:
     child_birth_date_max: "31/12/1987"
     
     # The cohort should live continuously in NL in the following period
+    live_continuously: true
     child_live_start: "01/01/2014"
     child_live_end: "31/12/2018"
     
@@ -41,8 +42,7 @@ default:
     secm_ref_date: "2018/12/31"
 
    
-    
-
+  
   data_analysis:
     test: "test"
     
@@ -65,6 +65,7 @@ default:
 
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
+    corop_data: "resources/gemeenten_corop_1981.xlsx"
     
   
 
