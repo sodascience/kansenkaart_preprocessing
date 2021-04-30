@@ -6,7 +6,7 @@ default:
     
     # The cohort should live continuously in NL in the following period
     live_continuously: false
-    child_live_start: "01/01/2014"
+    child_live_start: "01/01/2016"
     child_live_end: "31/12/2018"
     
     # The cohort is allowed to be unregistered for this many days 
@@ -37,6 +37,9 @@ default:
     # Parent income year range
     parent_income_year_min: 2014
     parent_income_year_max: 2018
+    
+    # censor income above this value
+    income_censoring_value: 1200000
   
 
   data_analysis:
