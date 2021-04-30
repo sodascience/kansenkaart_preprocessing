@@ -126,8 +126,23 @@ if (cfg$childhood_home_first) {
     filter(RINPERSOON %in% cohort_dat$RINPERSOON & RINPERSOONS %in% cohort_dat$RINPERSOONS) %>% 
     arrange(GBADATUMAANVANGADRESHOUDING) %>% 
     group_by(RINPERSOONS, RINPERSOON) %>% 
-    summarise(childhood_home = RINOBJECTNUMMER[1], 
-              type_childhood_home = SOORTOBJECTNUMMER[1])
+    summarise(
+      childhood_home = RINOBJECTNUMMER[1],
+      type_childhood_home = SOORTOBJECTNUMMER[1])
+ } else if (cfg$childhood_home_date) {
+    # take the address registration on a specific date
+    home_tab <- 
+      adres_tab %>% 
+      filter(RINPERSOON %in% cohort_dat$RINPERSOON & RINPERSOONS %in% cohort_dat$RINPERSOONS) %>%
+      # take addresses thar are still open on a specific date
+      filter(
+        GBADATUMAANVANGADRESHOUDING <= cfg$childhood_home_year &
+          GBADATUMEINDEADRESHOUDING >= cfg$childhood_home_year
+        ) %>%
+    group_by(RINPERSOONS, RINPERSOON) %>% 
+      summarise(
+        childhood_home = RINOBJECTNUMMER[1], 
+        type_childhood_home = SOORTOBJECTNUMMER[1])
 } else {
   # for each person, throw out the registrations from after they are 18 and select the longest-registered address from 0
   # to 18
@@ -138,7 +153,9 @@ if (cfg$childhood_home_first) {
     mutate(duration = difftime(min(GBADATUMEINDEADRESHOUDING, birthday_cutoff), GBADATUMAANVANGADRESHOUDING)) %>% 
     group_by(RINPERSOONS, RINPERSOON) %>% 
     arrange(-duration, .by_group = TRUE) %>% 
-    summarise(childhood_home = RINOBJECTNUMMER[1])
+    summarise(
+      childhood_home = RINOBJECTNUMMER[1],
+      type_childhood_home = SOORTOBJECTNUMMER[1])
 }
 
 # add childhood home to data
