@@ -45,39 +45,39 @@ if (cfg$live_continuously) {
   start_date  <- dmy(cfg$child_live_start)
   end_date    <- dmy(cfg$child_live_end)
   cutoff_days <- as.numeric(difftime(end_date, start_date, units = "days")) - cfg$child_live_slack_days
-
-
-# throw out anything with an end date before start_date, and anything with a start date after end_date
-# then also set the start date of everything to start_date, and the end date of everything to end_date
-# then compute the timespan of each record
-# TODO: check this once more
-adres_tab <- 
-  adres_tab %>% 
-  filter(GBADATUMEINDEADRESHOUDING %within% interval(start_date, end_date)) %>% 
-  as_factor(only_labelled = TRUE, levels = "values") %>%
-  mutate(
-    recordend   = as_date(ifelse(GBADATUMEINDEADRESHOUDING > end_date, end_date, GBADATUMEINDEADRESHOUDING)),
-    recordstart = as_date(ifelse(GBADATUMAANVANGADRESHOUDING < start_date, start_date, GBADATUMAANVANGADRESHOUDING)),
-    timespan    = difftime(recordend, recordstart, units = "days")
-  )
-
-# group by person and sum the total number of days
-# then compute whether this person lived in the Netherlands continuously
-days_tab <- 
-  adres_tab %>% 
-  select(RINPERSOONS, RINPERSOON, timespan) %>% 
-  mutate(timespan = as.numeric(timespan)) %>% 
-  group_by(RINPERSOONS, RINPERSOON) %>% 
-  summarize(total_days = sum(timespan)) %>% 
-  mutate(continuous_living = total_days >= cutoff_days) %>% 
-  select(RINPERSOONS, RINPERSOON, continuous_living)
-
-# add to cohort and filter
-cohort_dat <- 
-  left_join(cohort_dat, days_tab, by = c("RINPERSOONS", "RINPERSOON")) %>% 
-  filter(continuous_living) %>% 
-  select(-continuous_living)
-
+  
+  
+  # throw out anything with an end date before start_date, and anything with a start date after end_date
+  # then also set the start date of everything to start_date, and the end date of everything to end_date
+  # then compute the timespan of each record
+  # TODO: check this once more
+  adres_tab <- 
+    adres_tab %>% 
+    filter(GBADATUMEINDEADRESHOUDING %within% interval(start_date, end_date)) %>% 
+    as_factor(only_labelled = TRUE, levels = "values") %>%
+    mutate(
+      recordend   = as_date(ifelse(GBADATUMEINDEADRESHOUDING > end_date, end_date, GBADATUMEINDEADRESHOUDING)),
+      recordstart = as_date(ifelse(GBADATUMAANVANGADRESHOUDING < start_date, start_date, GBADATUMAANVANGADRESHOUDING)),
+      timespan    = difftime(recordend, recordstart, units = "days")
+    )
+  
+  # group by person and sum the total number of days
+  # then compute whether this person lived in the Netherlands continuously
+  days_tab <- 
+    adres_tab %>% 
+    select(RINPERSOONS, RINPERSOON, timespan) %>% 
+    mutate(timespan = as.numeric(timespan)) %>% 
+    group_by(RINPERSOONS, RINPERSOON) %>% 
+    summarize(total_days = sum(timespan)) %>% 
+    mutate(continuous_living = total_days >= cutoff_days) %>% 
+    select(RINPERSOONS, RINPERSOON, continuous_living)
+  
+  # add to cohort and filter
+  cohort_dat <- 
+    left_join(cohort_dat, days_tab, by = c("RINPERSOONS", "RINPERSOON")) %>% 
+    filter(continuous_living) %>% 
+    select(-continuous_living)
+  
 }
 
 #### PARENT LINK ####
@@ -126,8 +126,23 @@ if (cfg$childhood_home_first) {
     filter(RINPERSOON %in% cohort_dat$RINPERSOON & RINPERSOONS %in% cohort_dat$RINPERSOONS) %>% 
     arrange(GBADATUMAANVANGADRESHOUDING) %>% 
     group_by(RINPERSOONS, RINPERSOON) %>% 
-    summarise(childhood_home = RINOBJECTNUMMER[1], 
-              type_childhood_home = SOORTOBJECTNUMMER[1])
+    summarise(
+      childhood_home = RINOBJECTNUMMER[1],
+      type_childhood_home = SOORTOBJECTNUMMER[1])
+} else if (cfg$childhood_home_date) {
+  # take the address registration on a specific date
+  home_tab <- 
+    adres_tab %>% 
+    filter(RINPERSOON %in% cohort_dat$RINPERSOON & RINPERSOONS %in% cohort_dat$RINPERSOONS) %>%
+    # take addresses thar are still open on a specific date
+    filter(
+      GBADATUMAANVANGADRESHOUDING <= cfg$childhood_home_year &
+        GBADATUMEINDEADRESHOUDING >= cfg$childhood_home_year
+    ) %>%
+    group_by(RINPERSOONS, RINPERSOON) %>% 
+    summarise(
+      childhood_home = RINOBJECTNUMMER[1], 
+      type_childhood_home = SOORTOBJECTNUMMER[1])
 } else {
   # for each person, throw out the registrations from after they are 18 and select the longest-registered address from 0
   # to 18
@@ -138,7 +153,9 @@ if (cfg$childhood_home_first) {
     mutate(duration = difftime(min(GBADATUMEINDEADRESHOUDING, birthday_cutoff), GBADATUMAANVANGADRESHOUDING)) %>% 
     group_by(RINPERSOONS, RINPERSOON) %>% 
     arrange(-duration, .by_group = TRUE) %>% 
-    summarise(childhood_home = RINOBJECTNUMMER[1])
+    summarise(
+      childhood_home = RINOBJECTNUMMER[1],
+      type_childhood_home = SOORTOBJECTNUMMER[1])
 }
 
 # add childhood home to data
