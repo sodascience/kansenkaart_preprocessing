@@ -162,7 +162,7 @@ if (cfg$childhood_home_first) {
 }
 
 # add childhood home to data
-cohort_dat <- left_join(cohort_dat, home_tab)
+cohort_dat <- inner_join(cohort_dat, home_tab)
 
 # clean the postcode table
 vslpc_path <- file.path(loc$data_folder, loc$postcode_data)
