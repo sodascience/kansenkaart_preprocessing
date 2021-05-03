@@ -134,7 +134,7 @@ if (cfg$childhood_home_first) {
   home_tab <- 
     adres_tab %>% 
     filter(RINPERSOON %in% cohort_dat$RINPERSOON & RINPERSOONS %in% cohort_dat$RINPERSOONS) %>%
-    # take addresses thar are still open on a specific date
+    # take addresses that are still open on a specific date
     filter(
       GBADATUMAANVANGADRESHOUDING <= cfg$childhood_home_year &
         GBADATUMEINDEADRESHOUDING >= cfg$childhood_home_year
