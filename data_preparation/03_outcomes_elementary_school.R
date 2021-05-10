@@ -10,6 +10,7 @@ library(tidyverse)
 library(lubridate)
 library(haven)
 library(lubridate)
+library(readxl)
 
 #### CONFIGURATION ####
 # load main cohort dataset
@@ -37,7 +38,6 @@ get_inschrwpo_filename <- function(year) {
 school_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = integer(), WPOLEERJAAR = integer(), 
                      WPOREKENEN = integer(), WPOTAALLV = integer(), WPOTAALTV = integer(), 
                      WPOTOETSADVIES = integer(), WPOADVIESVO = integer(), WPOADVIESHERZ = integer())
-                     
 for (year in seq(as.integer(cfg$elementary_school_year_min), as.integer(cfg$elementary_school_year_max))) {
   school_dat <- 
       # read file from disk
@@ -60,8 +60,6 @@ cohort_dat <- left_join(cohort_dat, school_dat, by = c("RINPERSOONS", "RINPERSOO
 # only keep pupils who are in group 8
 cohort_dat <- cohort_dat %>%
   filter(WPOLEERJAAR == 8)
-
-sapply(cohort_dat, function(x) sum(is.na(x)))
 
 
 # create outcome variables
@@ -107,6 +105,38 @@ cohort_dat <- cohort_dat %>%
     havo_plus_final      = ifelse(is.na(final_school_advice), NA, havo_plus_final),
     vwo_plus_final       = ifelse(is.na(final_school_advice), NA, vwo_plus_final)
     
+  )
+
+# under advice and over advice outcomes
+# import under- and over advice table
+advice_tab <- read_xlsx(loc$advice_data, sheet = loc$advice_data_sheet)
+advice_mat <- as.matrix(advice_tab %>% select(-Teacher))
+
+# change row and column names to numeric education categories
+rownames(advice_mat) <- parse_number(advice_tab$Teacher)
+colnames(advice_mat) <- parse_number(colnames(advice_tab)[-1])
+
+#  creatd table with all possible combinations 
+advice_type_tab <- expand_grid(
+  final_advice = rownames(advice_mat), 
+  test_advice = colnames(advice_mat)
+) %>% 
+  rowwise() %>% 
+  mutate(advice_type = advice_mat[final_advice, test_advice],
+         final_advice = as.numeric(final_advice),
+         test_advice = as.numeric(test_advice)
+  ) %>% 
+  ungroup()
+
+cohort_dat <- left_join(cohort_dat, advice_type_tab, 
+                        by = c("final_school_advice" = "final_advice",
+                               "WPOTOETSADVIES" = "test_advice")) 
+
+# create under- and over advice outcomes
+cohort_dat <- cohort_dat %>%
+  mutate(
+    under_advice = ifelse(advice_type == "under", 1, 0),
+    over_advice = ifelse(advice_type == "over", 1, 0),
   )
 
 

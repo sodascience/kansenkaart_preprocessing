@@ -66,9 +66,8 @@ default:
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
     migration_data: "resources/LANDAKTUEELREF10.sav"
     corop_data: "resources/gemeenten_corop_1981.xlsx"
-
-    
-  
+    advice_data: "resources/vo_advisering.xlsx"
+    advice_data_sheet: "table"
 
 
 # Some file locations are different in the production environment at CBS
