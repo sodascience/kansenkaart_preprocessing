@@ -300,7 +300,7 @@ secm_tab <-
     employed = as.integer(SECM %in% c(11, 12, 13, 14)),
     
     # 22 =  Ontvanger bijstandsuitkering
-    social.benefits = as.integer(SECM == 22),
+    social_benefits = as.integer(SECM == 22),
     
     # 24  = Ontvanger uitkering ziekte/AO
     disability = as.integer(SECM == 24)
@@ -309,7 +309,6 @@ secm_tab <-
   select(-c(AANVSECM, EINDSECM, SECM))
   
 cohort_dat <- left_join(cohort_dat, secm_tab)
-
 
 
 #### HEALTH COSTS ####
@@ -327,25 +326,25 @@ health_tab <-
   mutate_at(names(health_tab %>% select(-c(RINPERSOONS, RINPERSOON))), 
             function(x) ifelse(x < 0, 0, x)  # replace negative values with 0
             ) %>%
-  mutate(pharma.costs       = ifelse(ZVWKFARMACIE > 0, 1, 0),
-         basis.ggz.costs    = ifelse(ZVWKGENBASGGZ > 0, 1, 0),
-         specialist.costs   = ifelse(ZVWKSPECGGZ > 0, 1, 0),
-         hospital.costs     = ifelse(ZVWKZIEKENHUIS > 0, 1, 0),
-         total.health.costs = rowSums(health_tab %>% select(-c(RINPERSOONS, RINPERSOON))) # sum of all healthcare costs
+  mutate(pharma_costs       = ifelse(ZVWKFARMACIE > 0, 1, 0),
+         basis_ggz_costs    = ifelse(ZVWKGENBASGGZ > 0, 1, 0),
+         specialist_costs   = ifelse(ZVWKSPECGGZ > 0, 1, 0),
+         hospital_costs     = ifelse(ZVWKZIEKENHUIS > 0, 1, 0),
+         total_health_costs = rowSums(health_tab %>% select(-c(RINPERSOONS, RINPERSOON))) # sum of all healthcare costs
          ) %>%
-  select(RINPERSOONS, RINPERSOON, pharma.costs, basis.ggz.costs, specialist.costs, 
-          hospital.costs, total.health.costs)
+  select(RINPERSOONS, RINPERSOON, pharma_costs, basis_ggz_costs, specialist_costs, 
+          hospital_costs, total_health_costs)
   
 
 cohort_dat <- left_join(cohort_dat, health_tab)
 
 # replace NA with 0 (for those who are not merged with the zvwzorgkostentab)
 cohort_dat <- cohort_dat %>%
-  mutate(pharma.costs       = ifelse(is.na(pharma.costs), 0, pharma.costs),
-         basis.ggz.costs    = ifelse(is.na(basis.ggz.costs), 0, basis.ggz.costs),
-         specialist.costs   = ifelse(is.na(specialist.costs), 0, specialist.costs),
-         hospital.costs     = ifelse(is.na(hospital.costs), 0, hospital.costs),
-         total.health.costs = ifelse(is.na(total.health.costs), 0, total.health.costs))
+  mutate(pharma_costs       = ifelse(is.na(pharma_costs), 0, pharma_costs),
+         basis_ggz_costs    = ifelse(is.na(basis_ggz_costs), 0, basis_ggz_costs),
+         specialist_costs   = ifelse(is.na(specialist_costs), 0, specialist_costs),
+         hospital_costs     = ifelse(is.na(hospital_costs), 0, hospital_costs),
+         total_health_costs = ifelse(is.na(total_health_costs), 0, total_health_costs))
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
