@@ -122,9 +122,9 @@ advice_type_tab <- expand_grid(
   test_advice = colnames(advice_mat)
 ) %>% 
   rowwise() %>% 
-  mutate(advice_type = advice_mat[final_advice, test_advice],
+  mutate(advice_type  = advice_mat[final_advice, test_advice],
          final_advice = as.numeric(final_advice),
-         test_advice = as.numeric(test_advice)
+         test_advice  = as.numeric(test_advice)
   ) %>% 
   ungroup()
 
@@ -136,7 +136,7 @@ cohort_dat <- left_join(cohort_dat, advice_type_tab,
 cohort_dat <- cohort_dat %>%
   mutate(
     under_advice = ifelse(advice_type == "under", 1, 0),
-    over_advice = ifelse(advice_type == "over", 1, 0),
+    over_advice  = ifelse(advice_type == "over", 1, 0),
   )
 
 
