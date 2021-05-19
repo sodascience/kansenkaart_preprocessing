@@ -129,7 +129,7 @@ if (cfg$childhood_home_first) {
     summarise(
       childhood_home = RINOBJECTNUMMER[1],
       type_childhood_home = SOORTOBJECTNUMMER[1])
-    
+
 } else if (cfg$childhood_home_date) {
   # take the address registration on a specific date
   home_tab <- 
