@@ -55,7 +55,7 @@ get_prnl_filename <- function(year) {
 
 
 # create function for cleaning the perinatal data
-CleanPerinatal <- function(file_name) {
+clean_perinatal <- function(file_name) {
 
   prnl_tab <- read_sav(file_name) %>% 
     mutate(RINPERSOONS_KIND_UITGEBREID = as_factor(RINPERSOONS_KIND_UITGEBREID, levels = "value")) %>%
@@ -104,7 +104,7 @@ perined_dat <- tibble(
 
 for (year in seq(format(dmy(cfg$child_birth_date_min), "%Y"), format(dmy(cfg$child_birth_date_max), "%Y"))){
   
-  perined_dat <- CleanPerinatal(get_prnl_filename(year)) %>% 
+  perined_dat <- clean_perinatal(get_prnl_filename(year)) %>% 
     # add year
     mutate(perined_year = year) %>%
     bind_rows(perined_dat, .)

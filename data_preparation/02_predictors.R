@@ -58,7 +58,7 @@ get_inpa_filename <- function(year) {
   # function to get latest inpa version of specified year
   # get all inpa files with the specified year
   fl <- list.files(
-    path = file.path(loc$data_folder, "InkomenBestedingen/INPATAB//"),
+    path = file.path(loc$data_folder, "InkomenBestedingen/INPATAB/"),
     pattern = paste0("INPA", year, "TABV[0-9]+\\.sav"), 
     full.names = TRUE
   )
