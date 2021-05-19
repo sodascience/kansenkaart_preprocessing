@@ -20,6 +20,10 @@ default:
     # Should we use the first address registration of a child as their childhood home?
     childhood_home_first: false
     
+    # Should we use the first address registration of a child on a specific date
+    childhood_home_date: false
+    childhood_home_year: "2015-12-31"
+    
     # Should we use the first address registration of a child at 31 december of the year of birth?
     childhood_home_birthyear: true
     
