@@ -129,7 +129,6 @@ if (cfg$childhood_home_first) {
     summarise(
       childhood_home = RINOBJECTNUMMER[1],
       type_childhood_home = SOORTOBJECTNUMMER[1])
-
 } else if (cfg$childhood_home_date) {
   # take the address registration on a specific date
   home_tab <- 
@@ -148,7 +147,7 @@ if (cfg$childhood_home_first) {
     summarise(childhood_home = RINOBJECTNUMMER[1],
               type_childhood_home = SOORTOBJECTNUMMER[1])
   
-  # take the address registration to be their childhood home at 31 december of the year of birth
+# take the address registration to be their childhood home at 31 december of the year of birth
 } else if (cfg$childhood_home_birthyear) {
   home_tab <- 
     adres_tab %>% 
@@ -166,7 +165,6 @@ if (cfg$childhood_home_first) {
   # create birth_year variable to link home addresses at year of birth 
   cohort_dat <- cohort_dat %>%
     mutate(birth_year = format(birthdate, "%Y")) 
-
 } else {
   # for each person, throw out the registrations from after they are 18 and select the longest-registered address from 0
   # to 18
