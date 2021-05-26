@@ -65,11 +65,10 @@ load_health_data <- function(file) {
   health_tab <- 
     health_tab %>%
     mutate(across(starts_with("ZVWK"), function(x) ifelse(x < 0, 0, x)))  # replace negative values with 0
-    ) %>%
+    %>%
     mutate(
       # sum of all healthcare costs
-      child_total_health_costs = rowSums(across(starts_with("ZVWK")))) 
-    ) %>%
+      child_total_health_costs = rowSums(across(starts_with("ZVWK")))) %>%
     select(RINPERSOONS, RINPERSOON, child_total_health_costs)
   
   # deflate
@@ -120,7 +119,7 @@ get_youth_filename <- function(year) {
 
 # rbind all youth protection files
 youth_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = integer())
-for (year in seq(as.integer(cfg$youth_protection_year_min), as.integer(cfg$youth_protection_year_max))) {
+for (year in seq.int(cfg$youth_protection_year_min, cfg$youth_protection_year_max)) {
   youth_dat <- read_sav(get_youth_filename(year), 
                         col_select = c("RINPERSOONS", "RINPERSOON")) %>%
     as_factor(only_labelled = TRUE, levels = "value") %>%
