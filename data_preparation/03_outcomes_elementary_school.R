@@ -116,7 +116,7 @@ advice_mat <- as.matrix(advice_tab %>% select(-Teacher))
 rownames(advice_mat) <- parse_number(advice_tab$Teacher)
 colnames(advice_mat) <- parse_number(colnames(advice_tab)[-1])
 
-#  creatd table with all possible combinations 
+#  create table with all possible combinations 
 advice_type_tab <- expand_grid(
   final_advice = rownames(advice_mat), 
   test_advice = colnames(advice_mat)
@@ -142,4 +142,3 @@ cohort_dat <- cohort_dat %>%
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
-
