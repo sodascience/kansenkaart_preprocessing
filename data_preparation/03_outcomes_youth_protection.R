@@ -90,7 +90,7 @@ load_health_data <- function(file) {
   
 health_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = integer(), 
                      child_total_health_costs = double(), year = integer())
-for (year in seq(as.integer(cfg$health_costs_year_min), as.integer(cfg$health_costs_year_max))) {
+for (year in seq.int(cfg$health_costs_year_min, cfg$health_costs_year_max)) {
   health_dat <- load_health_data(get_health_filename(year)) %>%
     # add to health costs
     bind_rows(health_dat, .)
