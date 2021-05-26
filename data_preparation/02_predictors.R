@@ -217,7 +217,8 @@ cohort_dat <-
     GBAHERKOMSTGROEPERING_third = ifelse(
       GBAGENERATIE_third == "derde generatie allochtoon" & GBAGENERATIE_ma != "tweede generatie allochtoon", 
       GBAHERKOMSTGROEPERING_pa, 
-      GBAHERKOMSTGROEPERING)
+      GBAHERKOMSTGROEPERING
+    )
   )
 
 # #### MIGRATION BACKGROUND ####
