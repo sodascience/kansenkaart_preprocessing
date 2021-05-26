@@ -34,7 +34,7 @@ get_school_filename <- function(year) {
 }
 
 school_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = integer(), education = integer())
-for (year in seq(as.integer(cfg$high_school_year_min), as.integer(cfg$high_school_year_max))){
+for (year in seq.int(cfg$high_school_year_min, cfg$high_school_year_max)) {
   school_dat <- read_sav(get_school_filename(year), 
                          col_select = c("RINPERSOONS", "RINPERSOON", "OPLNIVSOI2016AGG4HGMETNIRWO")) %>%
     rename(education = OPLNIVSOI2016AGG4HGMETNIRWO) %>%
