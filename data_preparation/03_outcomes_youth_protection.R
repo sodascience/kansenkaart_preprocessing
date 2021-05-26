@@ -64,8 +64,7 @@ load_health_data <- function(file) {
     
   health_tab <- 
     health_tab %>%
-    mutate_at(names(health_tab %>% select(-c(RINPERSOONS, RINPERSOON))), 
-              function(x) ifelse(x < 0, 0, x)  # replace negative values with 0
+    mutate(across(starts_with("ZVWK"), function(x) ifelse(x < 0, 0, x)))  # replace negative values with 0
     ) %>%
     mutate(
       # sum of all healthcare costs
