@@ -51,7 +51,7 @@ for (year in seq(as.integer(cfg$high_school_year_min), as.integer(cfg$high_schoo
 cohort_dat <- cohort_dat %>%
   mutate(year_age_16 = as.integer(format(birthdate, "%Y")) + 16)
 
-cohort_dat <- inner_join(cohort_dat, school_dat, by = c("RINPERSOON", "RINPERSOONS", "year_age_16"))
+cohort_dat <- left_join(cohort_dat, school_dat, by = c("RINPERSOON", "RINPERSOONS", "year_age_16"))
 
 
 # create dummy variables
