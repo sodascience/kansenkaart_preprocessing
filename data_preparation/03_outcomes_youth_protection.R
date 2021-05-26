@@ -68,7 +68,7 @@ load_health_data <- function(file) {
     ) %>%
     mutate(
       # sum of all healthcare costs
-      child_total_health_costs = rowSums(health_tab %>% select(-c(RINPERSOONS, RINPERSOON))) 
+      child_total_health_costs = rowSums(across(starts_with("ZVWK")))) 
     ) %>%
     select(RINPERSOONS, RINPERSOON, child_total_health_costs)
   
