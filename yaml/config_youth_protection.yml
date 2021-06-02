@@ -1,11 +1,11 @@
 default:
   data_preparation:
     # Child birth date filters the cohort by age
-    child_birth_date_min: "01/01/2008"
-    child_birth_date_max: "31/12/2016"
+    child_birth_date_min: "01/01/1997"
+    child_birth_date_max: "31/12/2015"
     
     # The cohort should live continuously in NL in the following period
-    live_continuously: false
+    live_continuously: true
     child_live_start: "01/01/2016"
     child_live_end: "31/12/2018"
     
@@ -20,14 +20,13 @@ default:
     # Should we use the first address registration of a child as their childhood home?
     childhood_home_first: false
     
-    # Should we use the first address registration of a child on a specific date
-    childhood_home_date: false
+     # Should we use the first address registration of a child on a specific date
+    childhood_home_date: true
     childhood_home_year: "2015-12-31"
     
     # Should we use the first address registration of a child at 31 december of the year of birth?
-    childhood_home_birthyear: true
+    childhood_home_birthyear: false
     
-    # If we do not, then use the longest address registration before cutoff_year:
     childhood_home_cutoff_year: 18
     
     # Postal code link to homes will be considered on this target date
@@ -38,13 +37,23 @@ default:
     # Income will be deflated to cpi_base_year euros.
     cpi_base_year: 2018
     
+     # Child total health costs  will be deflated to cpi_base_year euros.
+    cpi_base_year_child_health_costs: 2017
+    
     # Parent income year range
     parent_income_year_min: 2014
     parent_income_year_max: 2018
     
     # censor income above this value
     income_censoring_value: 1200000
-  
+    
+    # zvwzorgkosten outcome year range
+    health_costs_year_min: 2015
+    health_costs_year_max: 2017    
+    
+    # youth protection outcome year range
+    youth_protection_year_min: 2015
+    youth_protection_year_max: 2019
 
   data_analysis:
     test: "test"
@@ -62,12 +71,11 @@ default:
     postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2020031.sav"
     vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav"
     
-
+    
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
-    boys_weight_data: "resources/Percentielen - Jongens.xlsx"
-    girls_weight_data: "resources/Percentielen - Meisjes.xlsx"
-    
+    migration_data: "resources/LANDAKTUEELREF10.sav"
+    corop_data: "resources/gemeenten_corop_1981.xlsx"
   
 
 
