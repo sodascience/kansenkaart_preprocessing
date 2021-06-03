@@ -163,21 +163,91 @@ cohort_dat <-
 
 
 
-#### MIGRATION BACKGROUND ####
+#### THIRD GENERATION ####
+
+# import gba for parents generation and origin
+gba_path <- file.path(loc$data_folder, loc$gba_data)
+gba_dat <-  
+  read_sav(gba_path, col_select = c("RINPERSOONS", "RINPERSOON", "GBAGEBOORTELAND", 
+                                    "GBAGENERATIE", "GBAHERKOMSTGROEPERING")) %>% 
+  mutate(RINPERSOONS  = as_factor(RINPERSOONS,  levels = "values"),
+         GBAGENERATIE = as_factor(GBAGENERATIE, levels = "label"))
+
+# add parents generation to cohort
+cohort_dat <- cohort_dat %>% 
+  mutate(GBAGENERATIE = as_factor(GBAGENERATIE, levels = "label")) %>%
+  left_join(gba_dat,
+            by = c("RINPERSOONpa" = "RINPERSOON", "RINPERSOONSpa" = "RINPERSOONS"), 
+            suffix = c("", "_pa")) %>%
+  left_join(gba_dat,
+            by = c("RINPERSOONMa" = "RINPERSOON", "RINPERSOONSMa" = "RINPERSOONS"),
+            suffix = c("", "_ma"))
+
+
+# replace autochtoon to third generation if one of the parents were second generation  (2) 
+# and the child is native (0)
+cohort_dat <- 
+  cohort_dat %>%
+  mutate(across(c("GBAGENERATIE", "GBAGENERATIE_pa", "GBAGENERATIE_ma"), as.character)) %>% 
+  mutate(
+    GBAGENERATIE_third = ifelse(
+      GBAGENERATIE == "autochtoon" & (GBAGENERATIE_pa == "tweede generatie allochtoon" | GBAGENERATIE_ma == "tweede generatie allochtoon"), 
+      "derde generatie allochtoon", 
+      GBAGENERATIE
+    )
+  )
+
+# replace gbaherkomstgroepering if the child is third generation
+cohort_dat <- 
+  cohort_dat %>%
+  mutate(
+    across(c("GBAHERKOMSTGROEPERING", "GBAHERKOMSTGROEPERING_pa", "GBAHERKOMSTGROEPERING_ma"), 
+           as.character) %>%
+    as_factor(levels = "labels")
+  ) %>%
+  mutate(
+    # third generation child gets mom's origin
+    GBAHERKOMSTGROEPERING_third = ifelse(
+      GBAGENERATIE_third == "derde generatie allochtoon", 
+      GBAHERKOMSTGROEPERING_ma, 
+      GBAHERKOMSTGROEPERING
+    ),
+    # except when mom is not second generation, then dad's origin
+    GBAHERKOMSTGROEPERING_third = ifelse(
+      GBAGENERATIE_third == "derde generatie allochtoon" & GBAGENERATIE_ma != "tweede generatie allochtoon", 
+      GBAHERKOMSTGROEPERING_pa, 
+      GBAHERKOMSTGROEPERING
+    )
+  )
+
+# #### MIGRATION BACKGROUND ####
 western_tab <- read_sav(loc$migration_data)
 
-cohort_dat <- cohort_dat %>% 
-  # mutate(GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels")) %>%
+# create migration variable with origin without third generation
+cohort_dat <- cohort_dat %>%
   left_join(western_tab, by = c("GBAHERKOMSTGROEPERING" = "LANDEN")) %>%
   rename(migration = LANDTYPE) %>%
-  mutate(migration         = ifelse(GBAHERKOMSTGROEPERING == "Nederland", "Nederland", migration),
-         migration         = ifelse(GBAHERKOMSTGROEPERING == "Turkije", "Turkije", migration),
-         migration         = ifelse(GBAHERKOMSTGROEPERING == "Marokko", "Marokko", migration),
-         migration         = ifelse(GBAHERKOMSTGROEPERING == "Suriname", "Suriname", migration),
-         migration         = ifelse(GBAHERKOMSTGROEPERING == "Nederlandse Antillen (oud)", "Nederlandse Antillen (oud)", migration),
-         total_non_western = ifelse(migration == "NietWesters" |  migration == "Turkije" |
-                                      migration == "Marokko" | migration == "Suriname" | 
-                                      migration == "Nederlandse Antillen (oud)", 1, 0)) # create total non western dummy
+  mutate(
+    migration = ifelse(GBAHERKOMSTGROEPERING == "Nederland", "Nederland", migration),
+    migration = ifelse(GBAHERKOMSTGROEPERING == "Turkije", "Turkije", migration),
+    migration = ifelse(GBAHERKOMSTGROEPERING == "Marokko", "Marokko", migration),
+    migration = ifelse(GBAHERKOMSTGROEPERING == "Suriname", "Suriname", migration),
+    migration = ifelse(GBAHERKOMSTGROEPERING == "Nederlandse Antillen (oud)", "Nederlandse Antillen (oud)", migration),
+    
+    # create total non western dummy
+    total_non_western = ifelse(migration == "NietWesters" |  migration == "Turkije" |
+                                 migration == "Marokko" | migration == "Suriname" |
+                                 migration == "Nederlandse Antillen (oud)", 1, 0)
+  ) %>%
+  mutate(
+    migration_third = ifelse(GBAHERKOMSTGROEPERING_third == "Nederland", "Nederland", migration),
+    migration_third = ifelse(GBAHERKOMSTGROEPERING_third == "Turkije", "Turkije", migration),
+    migration_third = ifelse(GBAHERKOMSTGROEPERING_third == "Marokko", "Marokko", migration),
+    migration_third = ifelse(GBAHERKOMSTGROEPERING_third == "Suriname", "Suriname", migration),
+    migration_third = ifelse(GBAHERKOMSTGROEPERING_third == "Nederlandse Antillen (oud)", "Nederlandse Antillen (oud)", migration),
+    total_non_western_third = ifelse(migration == "NietWesters" |  migration == "Turkije" |
+                                       migration == "Marokko" | migration == "Suriname" |
+                                       migration == "Nederlandse Antillen (oud)", 1, 0)) # create total non western dummy
 
 
 
