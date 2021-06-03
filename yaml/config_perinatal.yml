@@ -67,6 +67,8 @@ default:
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
     boys_weight_data: "resources/Percentielen - Jongens.xlsx"
     girls_weight_data: "resources/Percentielen - Meisjes.xlsx"
+    migration_data: "resources/LANDAKTUEELREF10.sav"
+    corop_data: "resources/gemeenten_corop_1981.xlsx"
     
   
 
