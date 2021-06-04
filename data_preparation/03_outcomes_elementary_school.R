@@ -140,9 +140,5 @@ cohort_dat <- cohort_dat %>%
   )
 
 
-test <- cohort_dat %>% filter(is.na(advice_type))
-test <- test %>% relocate(WPOTOETSADVIES, final_school_advice, advice_type)
-
-
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
