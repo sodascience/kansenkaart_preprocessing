@@ -15,12 +15,7 @@ library(stringr)
 
 #### CONFIGURATION ####
 # load main cohort dataset
-cohort_dat <- read_rds("scratch/02_predictors.rds")
-
-# load the configuration
-cfg <- config::get("data_preparation")
-loc <- config::get("file_locations")
-
+cohort_dat <- read_rds(file.path(loc$scratch_folder, "02_predictors.rds"))
 
 
 ####  CHILD TOTAL HEALTH COSTS ####

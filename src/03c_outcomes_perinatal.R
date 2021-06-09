@@ -16,11 +16,7 @@ library(readxl)
 
 #### CONFIGURATION ####
 # load main cohort dataset
-cohort_dat <- read_rds("scratch/02_predictors.rds")
-
-# load the configuration
-cfg <- config::get("data_preparation")
-loc <- config::get("file_locations")
+cohort_dat <- read_rds(file.path(loc$scratch_folder, "02_predictors.rds"))
 
 
 # import percentile weight boys & girls
@@ -58,7 +54,7 @@ get_prnl_filename <- function(year) {
 clean_perinatal <- function(file_name) {
 
   prnl_tab <- read_sav(file_name) %>% 
-    mutate(RINPERSOONS_KIND_UITGEBREID = as_factor(RINPERSOONS_KIND_UITGEBREID, levels = "value")) %>%
+    mutate(RINPERSOONS_KIND_UITGEBREID = as_factor(RINPERSOONS_KIND_UITGEBREID)) %>%
     select(c("RINPERSOONS_KIND_UITGEBREID", "RINPERSOON_KIND",
              "Gewichtkind_ruw", "Amddd", "Geslachtkind")) %>%
     left_join(boys_weight_tab, by = c("Amddd" = "gestational_age")) %>%

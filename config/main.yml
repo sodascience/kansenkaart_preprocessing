@@ -1,12 +1,15 @@
 default:
   data_preparation:
+    # The name of the cohort
+    cohort_name: "main"
+    
     # Child birth date filters the cohort by age
-    child_birth_date_min: "01/01/2004"
-    child_birth_date_max: "31/12/2005"
+    child_birth_date_min: "01/01/1982"
+    child_birth_date_max: "31/12/1987"
     
     # The cohort should live continuously in NL in the following period
     live_continuously: true
-    child_live_start: "01/01/2016"
+    child_live_start: "01/01/2014"
     child_live_end: "31/12/2018"
     
     # The cohort is allowed to be unregistered for this many days 
@@ -18,10 +21,10 @@ default:
     parent_max_age_at_birth: 50
     
     # Should we use the first address registration of a child as their childhood home?
-    childhood_home_first: false
+    childhood_home_first: true
     
-     # Should we use the first address registration of a child on a specific date
-    childhood_home_date: true
+    # Should we use the first address registration of a child on a specific date
+    childhood_home_date: false
     childhood_home_year: "2015-12-31"
     
      # Should we use the first address registration of a child at 31 december of the year of birth?
@@ -39,26 +42,24 @@ default:
     cpi_base_year: 2018
     
     # Parent income year range
-    parent_income_year_min: 2014
-    parent_income_year_max: 2018
+    parent_income_year_min: 2006
+    parent_income_year_max: 2010
     
+    #  Child income year range
+    child_income_year_min: 2017
+    child_income_year_max: 2018
+    
+    # The socio-economic variables from SECMBUS will be measured on this target date
+    secm_ref_date: "2018/12/31"
+
     # censor income above this value
     income_censoring_value: 1200000
-
-    # elementary school outcome year range
-    elementary_school_year_min: 2014
-    elementary_school_year_max: 2018
-
-   
-  
-  data_analysis:
-    test: "test"
     
   file_locations:
     # The data folder is the root folder of the cbs microdata tables
     data_folder: "cbsdata"
     # The scratch folder is used to write intermediate output
-    scratch_folder: "scratch"
+    scratch_folder: "scratch/main"
     
     # path to the cbs microdata
     gba_data: "Bevolking/GBAPERSOONTAB/GBAPERSOON2018TABV2.sav"
@@ -66,17 +67,12 @@ default:
     kind_data: "Bevolking/KINDOUDERTAB/KINDOUDER2018TABV1.sav"
     postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2020031.sav"
     vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav"
+    hoogste_opl_data: "Onderwijs/HOOGSTEOPLTAB/HOOGSTEOPL2018TABV3.sav"
+    spolis_data: "Spolis/SPOLISBUS"
+    secm_data: "InkomenBestedingen/SECMBUS/SECMBUS2018V1.sav"
+    zvwzorgkosten_data: "GezondheidWelzijn/ZVWZORGKOSTENTAB/ZVWZORGKOSTEN2017TABV1.sav"
 
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
     migration_data: "resources/LANDAKTUEELREF10.sav"
     corop_data: "resources/gemeenten_corop_1981.xlsx"
-    advice_data: "resources/vo_advisering.xlsx"
-    advice_data_sheet: "table"
-
-
-# Some file locations are different in the production environment at CBS
-cbs:
-  file_locations: 
-    data_folder: "G:"
-

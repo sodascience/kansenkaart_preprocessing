@@ -14,12 +14,7 @@ library(haven)
 
 #### CONFIGURATION ####
 # load main cohort dataset
-cohort_dat <- read_rds("scratch/01_cohort.rds")
-
-# load the configuration
-cfg <- config::get("data_preparation")
-loc <- config::get("file_locations")
-
+cohort_dat <- read_rds(file.path(loc$scratch_folder, "01_cohort.rds"))
 
 #### PARENT INCOME ####
 # create a table with incomes at the cpi_base_year€ level
@@ -201,9 +196,7 @@ cohort_dat <-
 cohort_dat <- 
   cohort_dat %>%
   mutate(
-    across(c("GBAHERKOMSTGROEPERING", "GBAHERKOMSTGROEPERING_pa", "GBAHERKOMSTGROEPERING_ma"), 
-           as.character)  %>%
-      as_factor(levels = "labels")
+    across(c(GBAHERKOMSTGROEPERING, GBAHERKOMSTGROEPERING_pa, GBAHERKOMSTGROEPERING_ma), as_factor)
   ) %>%
   mutate(
     # third generation child gets mom's origin

@@ -16,11 +16,8 @@ library(lubridate)
 
 #### CONFIGURATION ####
 # load main cohort dataset
-cohort_dat <- read_rds("scratch/02_predictors.rds")
+cohort_dat <- read_rds(file.path(loc$scratch_folder, "02_predictors.rds"))
 
-# load the configuration
-cfg <- config::get("data_preparation")
-loc <- config::get("file_locations")
 
 #### CHILD INCOME ####
 # create a table with incomes at the cpi_base_year€ level
@@ -257,10 +254,9 @@ income_hours_tab <-
   )
 
 # combine variables
-spolis_tab <- left_join(income_hours_tab, longest_contract_tab)
-
-# compute flex contract dummy
-spolis_tab %>% mutate(flex_contract = ifelse(longest_contract_type == "Bepaalde tijd", 1, 0))
+spolis_tab <- left_join(income_hours_tab, longest_contract_tab) %>% 
+  # compute flex contract dummy
+  mutate(flex_contract = ifelse(longest_contract_type == "Bepaalde tijd", 1, 0))
 
 # add to cohort data
 cohort_dat <- left_join(cohort_dat, spolis_tab)

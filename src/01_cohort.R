@@ -14,13 +14,6 @@ library(lubridate)
 library(haven)
 library(readxl)
 
-#### CONFIGURATION ####
-# load the configuration
-cfg <- config::get("data_preparation")
-loc <- config::get("file_locations")
-
-# TODO: configuration entries for table locations
-
 #### SELECT COHORT FROM GBA ####
 gba_path <- file.path(loc$data_folder, loc$gba_data)
 gba_dat <-  
