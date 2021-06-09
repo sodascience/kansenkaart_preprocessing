@@ -6,7 +6,7 @@ A reproducible pre-processing pipeline for the Dutch Opportunity atlas. The inpu
 
 ## Installation
 - Clone this repository to a folder on your machine
-- Unzip the latest version of the built cbs data into the `/data` folder from [here](https://github.com/sodascience/cbs_validationdata/releases) OR edit the file locations in the `config` files to point to the right files.
+- Unzip the latest version of the built cbs data into the `/cbsdata` folder from [here](https://github.com/sodascience/cbs_validationdata/releases) OR edit the file locations in the `config` files to point to the right files.
 - Open the `.Rproj` file, install the `renv` package
 - Run `renv::restore()` to install the right versions of all dependencies
 
