@@ -64,14 +64,21 @@ load_health_data <- function(file) {
     
   health_tab <- 
     health_tab %>%
-    mutate(across(starts_with("ZVWK"), function(x) ifelse(x < 0, 0, x)))  # replace negative values with 0
-    %>%
+    # replace negative values with 0
+    mutate(across(starts_with("ZVWK"), function(x) ifelse(x < 0, 0, x)))  
+    
+  # sum of all healthcare costs
+  health_tab <- 
+    health_tab %>%
     mutate(
-      # sum of all healthcare costs
-      child_total_health_costs = rowSums(across(starts_with("ZVWK")))) %>%
+
+      child_total_health_costs = rowSums(across(starts_with("ZVWK")))
+      )%>%
     select(RINPERSOONS, RINPERSOON, child_total_health_costs)
   
+  
   # deflate
+  # if the year is not equal to the base year then deflate costs
   if (str_extract(file, "\\d{4}") != cfg$cpi_base_year_child_health_costs){
     
     health_tab <- health_tab %>%
@@ -79,6 +86,7 @@ load_health_data <- function(file) {
       left_join(cpi_tab %>% select(year, cpi), by = "year") %>% 
       mutate(child_total_health_costs = child_total_health_costs / (cpi / 100)) %>% 
       select(-cpi)
+    
   } else{
     health_tab <- health_tab %>%
       mutate(year = as.numeric(str_extract(file, "\\d{4}"))) 

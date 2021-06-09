@@ -202,8 +202,8 @@ cohort_dat <-
   cohort_dat %>%
   mutate(
     across(c("GBAHERKOMSTGROEPERING", "GBAHERKOMSTGROEPERING_pa", "GBAHERKOMSTGROEPERING_ma"), 
-           as.character) %>%
-    as_factor(levels = "labels")
+           as.character)  %>%
+      as_factor(levels = "labels")
   ) %>%
   mutate(
     # third generation child gets mom's origin
