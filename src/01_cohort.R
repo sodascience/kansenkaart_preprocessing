@@ -22,7 +22,10 @@ gba_dat <-
                                     "GBAHERKOMSTGROEPERING")) %>% 
   mutate(birthdate = ymd(paste(GBAGEBOORTEJAAR, GBAGEBOORTEMAAND, GBAGEBOORTEDAG, sep = "-"))) %>% 
   select(-GBAGEBOORTEJAAR, -GBAGEBOORTEMAAND, -GBAGEBOORTEDAG) %>%
-  mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values"))
+  mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
+         GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
+         GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
+         GBAGENERATIE = as_factor(GBAGENERATIE, levels = "labels"))
 
 cohort_dat <- 
   gba_dat %>% 
