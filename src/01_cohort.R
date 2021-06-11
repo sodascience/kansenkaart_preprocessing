@@ -25,7 +25,8 @@ gba_dat <-
   mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
          GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
          GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
-         GBAGENERATIE = as_factor(GBAGENERATIE, levels = "labels"))
+         GBAGENERATIE = as_factor(GBAGENERATIE, levels = "labels"),
+         GBAGESLACHT = as_factor(GBAGESLACHT, levels = "labels"))
 
 cohort_dat <- 
   gba_dat %>% 

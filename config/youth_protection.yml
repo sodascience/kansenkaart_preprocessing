@@ -58,9 +58,6 @@ default:
     youth_protection_year_min: 2015
     youth_protection_year_max: 2019
 
-  data_analysis:
-    test: "test"
-    
   file_locations:
     # The data folder is the root folder of the cbs microdata tables
     data_folder: "cbsdata"

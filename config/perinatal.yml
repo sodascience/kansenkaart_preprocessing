@@ -48,9 +48,6 @@ default:
     # censor income above this value
     income_censoring_value: 1200000
   
-
-  data_analysis:
-    test: "test"
     
   file_locations:
     # The data folder is the root folder of the cbs microdata tables

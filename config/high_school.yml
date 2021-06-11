@@ -52,10 +52,6 @@ default:
     high_school_year_min: 2014
     high_school_year_max: 2018
 
-   
-  
-  data_analysis:
-    test: "test"
     
   file_locations:
     # The data folder is the root folder of the cbs microdata tables

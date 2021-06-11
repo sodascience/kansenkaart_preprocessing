@@ -54,7 +54,9 @@ get_prnl_filename <- function(year) {
 clean_perinatal <- function(file_name) {
 
   prnl_tab <- read_sav(file_name) %>% 
-    mutate(RINPERSOONS_KIND_UITGEBREID = as_factor(RINPERSOONS_KIND_UITGEBREID)) %>%
+    mutate(RINPERSOONS_KIND_UITGEBREID = as_factor(RINPERSOONS_KIND_UITGEBREID, 
+                                                   levels = "values")
+           ) %>%
     select(c("RINPERSOONS_KIND_UITGEBREID", "RINPERSOON_KIND",
              "Gewichtkind_ruw", "Amddd", "Geslachtkind")) %>%
     left_join(boys_weight_tab, by = c("Amddd" = "gestational_age")) %>%
