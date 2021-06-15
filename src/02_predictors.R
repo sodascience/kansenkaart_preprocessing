@@ -14,12 +14,7 @@ library(haven)
 
 #### CONFIGURATION ####
 # load main cohort dataset
-cohort_dat <- read_rds("scratch/01_cohort.rds")
-
-# load the configuration
-cfg <- config::get("data_preparation")
-loc <- config::get("file_locations")
-
+cohort_dat <- read_rds(file.path(loc$scratch_folder, "01_cohort.rds"))
 
 #### PARENT INCOME ####
 # create a table with incomes at the cpi_base_year€ level
@@ -171,11 +166,11 @@ gba_dat <-
   read_sav(gba_path, col_select = c("RINPERSOONS", "RINPERSOON", "GBAGEBOORTELAND", 
                                     "GBAGENERATIE", "GBAHERKOMSTGROEPERING")) %>% 
   mutate(RINPERSOONS  = as_factor(RINPERSOONS,  levels = "values"),
-         GBAGENERATIE = as_factor(GBAGENERATIE, levels = "label"))
+         GBAGENERATIE = as_factor(GBAGENERATIE, levels = "label"),
+         GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"))
 
 # add parents generation to cohort
 cohort_dat <- cohort_dat %>% 
-  mutate(GBAGENERATIE = as_factor(GBAGENERATIE, levels = "label")) %>%
   left_join(gba_dat,
             by = c("RINPERSOONpa" = "RINPERSOON", "RINPERSOONSpa" = "RINPERSOONS"), 
             suffix = c("", "_pa")) %>%
@@ -201,9 +196,8 @@ cohort_dat <-
 cohort_dat <- 
   cohort_dat %>%
   mutate(
-    across(c("GBAHERKOMSTGROEPERING", "GBAHERKOMSTGROEPERING_pa", "GBAHERKOMSTGROEPERING_ma"), 
-           as.character)  %>%
-      as_factor(levels = "labels")
+    across(c(GBAHERKOMSTGROEPERING, GBAHERKOMSTGROEPERING_pa, GBAHERKOMSTGROEPERING_ma), 
+           as.character)
   ) %>%
   mutate(
     # third generation child gets mom's origin

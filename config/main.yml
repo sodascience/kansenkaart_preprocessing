@@ -1,5 +1,8 @@
 default:
   data_preparation:
+    # The name of the cohort
+    cohort_name: "main"
+    
     # Child birth date filters the cohort by age
     child_birth_date_min: "01/01/1982"
     child_birth_date_max: "31/12/1987"
@@ -51,17 +54,12 @@ default:
 
     # censor income above this value
     income_censoring_value: 1200000
-
-   
-  
-  data_analysis:
-    test: "test"
     
   file_locations:
     # The data folder is the root folder of the cbs microdata tables
     data_folder: "cbsdata"
     # The scratch folder is used to write intermediate output
-    scratch_folder: "scratch"
+    scratch_folder: "scratch/main"
     
     # path to the cbs microdata
     gba_data: "Bevolking/GBAPERSOONTAB/GBAPERSOON2018TABV2.sav"
@@ -78,13 +76,3 @@ default:
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
     migration_data: "resources/LANDAKTUEELREF10.sav"
     corop_data: "resources/gemeenten_corop_1981.xlsx"
-
-    
-  
-
-
-# Some file locations are different in the production environment at CBS
-cbs:
-  file_locations: 
-    data_folder: "G:"
-

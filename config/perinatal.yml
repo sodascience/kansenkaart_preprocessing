@@ -1,11 +1,14 @@
 default:
   data_preparation:
+    # The name of the cohort
+    cohort_name: "perinatal"
+    
     # Child birth date filters the cohort by age
-    child_birth_date_min: "01/01/2004"
-    child_birth_date_max: "31/12/2005"
+    child_birth_date_min: "01/01/2008"
+    child_birth_date_max: "31/12/2016"
     
     # The cohort should live continuously in NL in the following period
-    live_continuously: true
+    live_continuously: false
     child_live_start: "01/01/2016"
     child_live_end: "31/12/2018"
     
@@ -20,12 +23,12 @@ default:
     # Should we use the first address registration of a child as their childhood home?
     childhood_home_first: false
     
-     # Should we use the first address registration of a child on a specific date
-    childhood_home_date: true
+    # Should we use the first address registration of a child on a specific date
+    childhood_home_date: false
     childhood_home_year: "2015-12-31"
     
-     # Should we use the first address registration of a child at 31 december of the year of birth?
-    childhood_home_birthyear: false
+    # Should we use the first address registration of a child at 31 december of the year of birth?
+    childhood_home_birthyear: true
     
     # If we do not, then use the longest address registration before cutoff_year:
     childhood_home_cutoff_year: 18
@@ -44,21 +47,13 @@ default:
     
     # censor income above this value
     income_censoring_value: 1200000
-
-    # elementary school outcome year range
-    elementary_school_year_min: 2014
-    elementary_school_year_max: 2018
-
-   
   
-  data_analysis:
-    test: "test"
     
   file_locations:
     # The data folder is the root folder of the cbs microdata tables
     data_folder: "cbsdata"
     # The scratch folder is used to write intermediate output
-    scratch_folder: "scratch"
+    scratch_folder: "scratch/perinatal"
     
     # path to the cbs microdata
     gba_data: "Bevolking/GBAPERSOONTAB/GBAPERSOON2018TABV2.sav"
@@ -66,17 +61,11 @@ default:
     kind_data: "Bevolking/KINDOUDERTAB/KINDOUDER2018TABV1.sav"
     postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2020031.sav"
     vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav"
+    
 
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
+    boys_weight_data: "resources/Percentielen - Jongens.xlsx"
+    girls_weight_data: "resources/Percentielen - Meisjes.xlsx"
     migration_data: "resources/LANDAKTUEELREF10.sav"
     corop_data: "resources/gemeenten_corop_1981.xlsx"
-    advice_data: "resources/vo_advisering.xlsx"
-    advice_data_sheet: "table"
-
-
-# Some file locations are different in the production environment at CBS
-cbs:
-  file_locations: 
-    data_folder: "G:"
-

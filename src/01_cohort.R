@@ -14,13 +14,6 @@ library(lubridate)
 library(haven)
 library(readxl)
 
-#### CONFIGURATION ####
-# load the configuration
-cfg <- config::get("data_preparation")
-loc <- config::get("file_locations")
-
-# TODO: configuration entries for table locations
-
 #### SELECT COHORT FROM GBA ####
 gba_path <- file.path(loc$data_folder, loc$gba_data)
 gba_dat <-  
@@ -29,7 +22,11 @@ gba_dat <-
                                     "GBAHERKOMSTGROEPERING")) %>% 
   mutate(birthdate = ymd(paste(GBAGEBOORTEJAAR, GBAGEBOORTEMAAND, GBAGEBOORTEDAG, sep = "-"))) %>% 
   select(-GBAGEBOORTEJAAR, -GBAGEBOORTEMAAND, -GBAGEBOORTEDAG) %>%
-  mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values"))
+  mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
+         GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
+         GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
+         GBAGENERATIE = as_factor(GBAGENERATIE, levels = "labels"),
+         GBAGESLACHT = as_factor(GBAGESLACHT, levels = "labels"))
 
 cohort_dat <- 
   gba_dat %>% 
