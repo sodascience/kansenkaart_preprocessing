@@ -17,7 +17,7 @@ library(haven)
 cohort_dat <- read_rds(file.path(loc$scratch_folder, "01_cohort.rds"))
 
 #### PARENT INCOME ####
-# create a table with incomes at the cpi_base_year€ level
+# create a table with incomes at the cpi_base_year level
 # first, load consumer price index data
 # source: https://opendata.cbs.nl/statline/#/CBS/nl/dataset/83131NED/table?ts=1610019128426
 cpi_tab <- 
@@ -41,7 +41,7 @@ get_ipi_filename <- function(year) {
   # function to get latest ipi version of specified year
   # get all ipi files with the specified year
   fl <- list.files(
-    path = file.path(loc$data_folder, "InkomenBestedingen/INTEGRAAL PERSOONLIJK INKOMEN/"),
+    path = file.path(loc$data_folder, "InkomenBestedingen/INTEGRAAL PERSOONLIJK INKOMEN/", year),
     pattern = paste0("PERSOONINK", year, "TABV[0-9]+\\.sav"), 
     full.names = TRUE
   )
@@ -64,7 +64,7 @@ get_inpa_filename <- function(year) {
 parents <- c(cohort_dat$RINPERSOONMa, cohort_dat$RINPERSOONSMa, 
              cohort_dat$RINPERSOONpa, cohort_dat$RINPERSOONSpa)
 
-income_parents <- tibble(RINPERSOONS = factor(), RINPERSOON = integer(), 
+income_parents <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), 
                          income = double(), year = integer())
 for (year in seq(as.integer(cfg$parent_income_year_min), as.integer(cfg$parent_income_year_max))) {
   if (year < 2011) {
@@ -97,9 +97,16 @@ for (year in seq(as.integer(cfg$parent_income_year_min), as.integer(cfg$parent_i
 }
 
 # remove negative and NA incomes
-income_parents <-
-  income_parents %>% 
-  mutate(income = ifelse(income == 9999999999 | income < 0, NA, income)) 
+if (as.integer(cfg$parent_income_year_max) < 2011) {
+  income_parents <-
+    income_parents %>% 
+    mutate(income = ifelse(income == 999999999 | income < 0, NA, income)) 
+  
+} else {
+  income_parents <-
+    income_parents %>% 
+    mutate(income = ifelse(income == 9999999999 | income < 0, NA, income)) 
+}
 
 # censor income above a certain value
 income_parents <-
@@ -138,7 +145,11 @@ cohort_dat <- left_join(
 )
 
 # parents
-cohort_dat <- cohort_dat %>% mutate(income_parents = income_ma + income_pa)
+cohort_dat <- cohort_dat %>% 
+  rowwise() %>%
+  mutate(income_parents =  sum(income_ma, income_pa, na.rm = TRUE),
+         income_parents = ifelse((is.na(income_ma) & is.na(income_pa)), 
+                                 NA, income_parents))
 
 # free up memory
 rm(income_parents)
@@ -150,12 +161,13 @@ cohort_dat <- cohort_dat %>%
 # compute income transformations
 cohort_dat <- 
   cohort_dat %>% 
+  ungroup() %>%
   mutate(
     income_parents_1log = log1p(income_parents),
-    income_parents_rank = rank(income_parents, na.last = "keep", ties.method = "average"),
-    income_parents_perc = income_parents_rank / max(income_parents_rank)
+    income_parents_rank = rank(income_parents, ties.method = "average"),
+    income_parents_perc = income_parents_rank / max(income_parents_rank),
+    parents_rank_100 = ntile(income_parents, 100)
   )
-
 
 
 #### THIRD GENERATION ####
@@ -179,16 +191,23 @@ cohort_dat <- cohort_dat %>%
             suffix = c("", "_ma"))
 
 
+
 # replace autochtoon to third generation if one of the parents were second generation  (2) 
 # and the child is native (0)
 cohort_dat <- 
   cohort_dat %>%
   mutate(across(c("GBAGENERATIE", "GBAGENERATIE_pa", "GBAGENERATIE_ma"), as.character)) %>% 
   mutate(
+    GBAGENERATIE_third = as.character(GBAGENERATIE),
     GBAGENERATIE_third = ifelse(
-      GBAGENERATIE == "autochtoon" & (GBAGENERATIE_pa == "tweede generatie allochtoon" | GBAGENERATIE_ma == "tweede generatie allochtoon"), 
+      GBAGENERATIE == "autochtoon" & GBAGENERATIE_ma == "tweede generatie allochtoon" & !is.na(GBAGENERATIE_ma), 
       "derde generatie allochtoon", 
-      GBAGENERATIE
+      GBAGENERATIE_third
+    ),
+    GBAGENERATIE_third = ifelse(
+      GBAGENERATIE == "autochtoon" & GBAGENERATIE_pa == "tweede generatie allochtoon" & !is.na(GBAGENERATIE_pa), 
+      "derde generatie allochtoon", 
+      GBAGENERATIE_third
     )
   )
 
@@ -202,47 +221,43 @@ cohort_dat <-
   mutate(
     # third generation child gets mom's origin
     GBAHERKOMSTGROEPERING_third = ifelse(
-      GBAGENERATIE_third == "derde generatie allochtoon", 
+      GBAGENERATIE_third == "derde generatie allochtoon" & !is.na(GBAHERKOMSTGROEPERING_ma),
       GBAHERKOMSTGROEPERING_ma, 
       GBAHERKOMSTGROEPERING
     ),
     # except when mom is not second generation, then dad's origin
     GBAHERKOMSTGROEPERING_third = ifelse(
-      GBAGENERATIE_third == "derde generatie allochtoon" & GBAGENERATIE_ma != "tweede generatie allochtoon", 
+      GBAGENERATIE_third == "derde generatie allochtoon" & (GBAGENERATIE_ma != "tweede generatie allochtoon" | is.na(GBAGENERATIE_ma)),
       GBAHERKOMSTGROEPERING_pa, 
-      GBAHERKOMSTGROEPERING
+      GBAHERKOMSTGROEPERING_third
     )
   )
 
-# #### MIGRATION BACKGROUND ####
-western_tab <- read_sav(loc$migration_data)
+#### MIGRATION BACKGROUND ####
+western_tab <- read_sav(loc$migration_data, 
+                        col_select = c("LAND", "LANDTYPE")) %>%
+  mutate(
+    LAND = as_factor(LAND, levels = "labels"),
+    LANDTYPE = as_factor(LANDTYPE, levels = "labels")
+  )
 
 # create migration variable with origin without third generation
 cohort_dat <- cohort_dat %>%
-  left_join(western_tab, by = c("GBAHERKOMSTGROEPERING" = "LANDEN")) %>%
-  rename(migration = LANDTYPE) %>%
+  left_join(western_tab, by = c("GBAHERKOMSTGROEPERING" = "LAND")) %>%
   mutate(
-    migration = ifelse(GBAHERKOMSTGROEPERING == "Nederland", "Nederland", migration),
-    migration = ifelse(GBAHERKOMSTGROEPERING == "Turkije", "Turkije", migration),
-    migration = ifelse(GBAHERKOMSTGROEPERING == "Marokko", "Marokko", migration),
-    migration = ifelse(GBAHERKOMSTGROEPERING == "Suriname", "Suriname", migration),
-    migration = ifelse(GBAHERKOMSTGROEPERING == "Nederlandse Antillen (oud)", "Nederlandse Antillen (oud)", migration),
-    
-    # create total non western dummy
-    total_non_western = ifelse(migration == "NietWesters" |  migration == "Turkije" |
-                                 migration == "Marokko" | migration == "Suriname" |
-                                 migration == "Nederlandse Antillen (oud)", 1, 0)
-  ) %>%
-  mutate(
-    migration_third = ifelse(GBAHERKOMSTGROEPERING_third == "Nederland", "Nederland", migration),
-    migration_third = ifelse(GBAHERKOMSTGROEPERING_third == "Turkije", "Turkije", migration),
-    migration_third = ifelse(GBAHERKOMSTGROEPERING_third == "Marokko", "Marokko", migration),
-    migration_third = ifelse(GBAHERKOMSTGROEPERING_third == "Suriname", "Suriname", migration),
-    migration_third = ifelse(GBAHERKOMSTGROEPERING_third == "Nederlandse Antillen (oud)", "Nederlandse Antillen (oud)", migration),
-    total_non_western_third = ifelse(migration == "NietWesters" |  migration == "Turkije" |
-                                       migration == "Marokko" | migration == "Suriname" |
-                                       migration == "Nederlandse Antillen (oud)", 1, 0)) # create total non western dummy
+    migration_third = as.character(LANDTYPE),
+    migration_third = ifelse(GBAHERKOMSTGROEPERING_third == "Nederland", "Nederland", migration_third),
+    migration_third = ifelse(GBAHERKOMSTGROEPERING_third == "Turkije", "Turkije", migration_third),
+    migration_third = ifelse(GBAHERKOMSTGROEPERING_third == "Marokko", "Marokko", migration_third),
+    migration_third = ifelse(GBAHERKOMSTGROEPERING_third == "Suriname", "Suriname", migration_third),
+    migration_third = ifelse(GBAHERKOMSTGROEPERING_third == "Nederlandse Antillen (oud)", "Nederlandse Antillen (oud)", migration_third),
+    total_non_western_third = ifelse(migration_third == "NietWesters" |  migration_third == "Turkije" |
+                                       migration_third == "Marokko" | migration_third == "Suriname" |
+                                       migration_third == "Nederlandse Antillen (oud)", 1, 0)) %>%
+  select(-LANDTYPE)
 
+# free up memory
+rm(gba_dat, western_tab)
 
 
 #### WRITE OUTPUT TO SCRATCH ####

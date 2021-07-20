@@ -38,7 +38,7 @@ cpi_tab <-
 # get all zvwzorgkosten files with the specified year
 get_health_filename <- function(year) {
   fl <- list.files(
-    path = file.path(loc$data_folder, "GezondheidWelzijn/ZVWZORGKOSTENTAB"),
+    path = file.path(loc$data_folder, "GezondheidWelzijn/ZVWZORGKOSTENTAB/", year),
     pattern = paste0("ZVWZORGKOSTEN", year, "TABV[0-9]+\\.sav"), 
     full.names = TRUE
   )
@@ -48,29 +48,32 @@ get_health_filename <- function(year) {
 
 # create function for cleaning
 load_health_data <- function(file) {
-
+  
   health_tab <- read_sav(file,
                          col_select = c("RINPERSOONS", "RINPERSOON", "ZVWKFARMACIE", "ZVWKGENBASGGZ", 
-                   "ZVWKSPECGGZ", "ZVWKZIEKENHUIS", "ZVWKZIEKENVERVOER", "ZVWKEERSTELIJNSPSYCHO",
-                   "ZVWKGERIATRISCH", "ZVWKOPHOOGFACTOR", "ZVWKGEBOORTEZORG", "ZVWKGGZ",
-                   "ZVWKWYKVERPLEGING", "ZVWKHUISARTS", "ZVWKPARAMEDISCH", "ZVWKBUITENLAND",
-                   "ZVWKHULPMIDDEL", "ZVWKOVERIG", "ZVWKMONDZORG")) %>% 
+                                        "ZVWKSPECGGZ", "ZVWKZIEKENHUIS", "ZVWKZIEKENVERVOER", "ZVWKEERSTELIJNSPSYCHO",
+                                        "ZVWKGERIATRISCH", "ZVWKOPHOOGFACTOR", "ZVWKGEBOORTEZORG", "ZVWKGGZ",
+                                        "ZVWKWYKVERPLEGING", "ZVWKHUISARTS", "ZVWKPARAMEDISCH", "ZVWKBUITENLAND",
+                                        "ZVWKHULPMIDDEL", "ZVWKOVERIG", "ZVWKMONDZORG")) %>% 
     as_factor(only_labelled = TRUE, levels = "values") 
-    
+  
   health_tab <- 
     health_tab %>%
     # replace negative values with 0
     mutate(across(starts_with("ZVWK"), function(x) ifelse(x < 0, 0, x)))  
-    
+  
   # sum of all healthcare costs
   health_tab <- 
     health_tab %>%
+    rowwise() %>%
     mutate(
-
-      child_total_health_costs = rowSums(across(starts_with("ZVWK")))
-      )%>%
+      child_total_health_costs = sum(ZVWKFARMACIE, ZVWKGENBASGGZ, ZVWKSPECGGZ, ZVWKZIEKENHUIS, 
+                                     ZVWKZIEKENVERVOER, ZVWKEERSTELIJNSPSYCHO,
+                                     ZVWKGERIATRISCH, ZVWKOPHOOGFACTOR, ZVWKGEBOORTEZORG, ZVWKGGZ,
+                                     ZVWKWYKVERPLEGING, ZVWKHUISARTS, ZVWKPARAMEDISCH, ZVWKBUITENLAND,
+                                     ZVWKHULPMIDDEL, ZVWKOVERIG, ZVWKMONDZORG, na.rm = TRUE) 
+    ) %>%
     select(RINPERSOONS, RINPERSOON, child_total_health_costs)
-  
   
   # deflate
   # if the year is not equal to the base year then deflate costs
@@ -89,8 +92,8 @@ load_health_data <- function(file) {
   
   return(health_tab)
 }
-  
-health_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = integer(), 
+
+health_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), 
                      child_total_health_costs = double(), year = integer())
 for (year in seq.int(cfg$health_costs_year_min, cfg$health_costs_year_max)) {
   health_dat <- load_health_data(get_health_filename(year)) %>%
@@ -102,10 +105,16 @@ for (year in seq.int(cfg$health_costs_year_min, cfg$health_costs_year_max)) {
 health_dat <- health_dat %>%
   group_by(RINPERSOONS, RINPERSOON) %>%
   summarise(child_total_health_costs = mean(child_total_health_costs))
- 
+
 cohort_dat <- left_join(cohort_dat, health_dat)
 
-
+# change NA to 0
+cohort_dat <- cohort_dat %>%
+  mutate(
+    child_total_health_costs = ifelse(is.na(child_total_health_costs),
+                                      0, child_total_health_costs))
+# free up memory
+rm(health_dat)
 
 ####  YOUTH PROTECTION ####
 
@@ -121,7 +130,7 @@ get_youth_filename <- function(year) {
 }
 
 # rbind all youth protection files
-youth_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = integer())
+youth_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = character())
 for (year in seq.int(cfg$youth_protection_year_min, cfg$youth_protection_year_max)) {
   youth_dat <- read_sav(get_youth_filename(year), 
                         col_select = c("RINPERSOONS", "RINPERSOON")) %>%

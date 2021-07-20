@@ -21,7 +21,7 @@ cohort_dat <- read_rds(file.path(loc$scratch_folder, "02_predictors.rds"))
 # function to get latest hoogsteopl version of specified year
 get_school_filename <- function(year) {
   fl <- list.files(
-    path = file.path(loc$data_folder, "Onderwijs/HOOGSTEOPLTAB"),
+    path = file.path(loc$data_folder, "Onderwijs/HOOGSTEOPLTAB/", year),
     pattern = paste0("HOOGSTEOPL", year, "TABV[0-9]+\\.sav"), 
     full.names = TRUE
   )
@@ -29,15 +29,18 @@ get_school_filename <- function(year) {
   sort(fl, decreasing = TRUE)[1]
 }
 
-school_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = integer(), education = integer())
+school_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), 
+                     education = integer())
 for (year in seq.int(cfg$high_school_year_min, cfg$high_school_year_max)) {
   school_dat <- read_sav(get_school_filename(year), 
                          col_select = c("RINPERSOONS", "RINPERSOON", "OPLNIVSOI2016AGG4HGMETNIRWO")) %>%
     rename(education = OPLNIVSOI2016AGG4HGMETNIRWO) %>%
     mutate(
       RINPERSOONS = as_factor(RINPERSOONS, levels = "value"),
+      education = ifelse(education == "----", NA, education),
+      education = as.numeric(education),
       year_age_16 = year
-      ) %>%
+    ) %>%
     # add to income parents
     bind_rows(school_dat, .)
 }
@@ -47,7 +50,8 @@ for (year in seq.int(cfg$high_school_year_min, cfg$high_school_year_max)) {
 cohort_dat <- cohort_dat %>%
   mutate(year_age_16 = as.integer(format(birthdate, "%Y")) + 16)
 
-cohort_dat <- left_join(cohort_dat, school_dat, by = c("RINPERSOON", "RINPERSOONS", "year_age_16"))
+cohort_dat <- inner_join(cohort_dat, school_dat, 
+                         by = c("RINPERSOON", "RINPERSOONS", "year_age_16"))
 
 
 # create dummy variables

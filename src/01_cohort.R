@@ -20,7 +20,7 @@ gba_dat <-
   read_sav(gba_path, col_select = c("RINPERSOONS", "RINPERSOON", "GBAGEBOORTELAND", "GBAGESLACHT", 
                                     "GBAGEBOORTEJAAR", "GBAGEBOORTEMAAND", "GBAGEBOORTEDAG", "GBAGENERATIE", 
                                     "GBAHERKOMSTGROEPERING")) %>% 
-  mutate(birthdate = ymd(paste(GBAGEBOORTEJAAR, GBAGEBOORTEMAAND, GBAGEBOORTEDAG, sep = "-"))) %>% 
+  mutate(birthdate = dmy(paste(GBAGEBOORTEDAG, GBAGEBOORTEMAAND, GBAGEBOORTEJAAR, sep = "-"))) %>% 
   select(-GBAGEBOORTEJAAR, -GBAGEBOORTEMAAND, -GBAGEBOORTEDAG) %>%
   mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
          GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
@@ -32,12 +32,18 @@ cohort_dat <-
   gba_dat %>% 
   filter(birthdate %within% interval(dmy(cfg$child_birth_date_min), dmy(cfg$child_birth_date_max)))
 
-#### LIVE CONTINUOUSLY IN NL ####
-# We only include children who live continuously in the Netherlands between child_live_start and child_live_end.
-adres_path <- file.path(loc$data_folder, loc$gbaao_data)
-adres_tab  <- read_sav(adres_path)
 
+#### LIVE CONTINUOUSLY IN NL ####
 if (cfg$live_continuously) {
+  
+  # We only include children who live continuously in the Netherlands between child_live_start and child_live_end.
+  adres_path <- file.path(loc$data_folder, loc$gbaao_data)
+  adres_tab  <- read_sav(adres_path) %>%
+    mutate(
+      RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
+      GBADATUMAANVANGADRESHOUDING = ymd(GBADATUMAANVANGADRESHOUDING),
+      GBADATUMEINDEADRESHOUDING = ymd(GBADATUMEINDEADRESHOUDING)
+    )
   
   start_date  <- dmy(cfg$child_live_start)
   end_date    <- dmy(cfg$child_live_end)
@@ -47,14 +53,13 @@ if (cfg$live_continuously) {
   # throw out anything with an end date before start_date, and anything with a start date after end_date
   # then also set the start date of everything to start_date, and the end date of everything to end_date
   # then compute the timespan of each record
-  # TODO: check this once more
   adres_tab <- 
     adres_tab %>% 
-    filter(GBADATUMEINDEADRESHOUDING %within% interval(start_date, end_date)) %>% 
-    as_factor(only_labelled = TRUE, levels = "values") %>%
+    filter(!(GBADATUMEINDEADRESHOUDING < start_date),
+           !(GBADATUMAANVANGADRESHOUDING > end_date)) %>%
     mutate(
-      recordend   = as_date(ifelse(GBADATUMEINDEADRESHOUDING > end_date, end_date, GBADATUMEINDEADRESHOUDING)),
       recordstart = as_date(ifelse(GBADATUMAANVANGADRESHOUDING < start_date, start_date, GBADATUMAANVANGADRESHOUDING)),
+      recordend   = as_date(ifelse(GBADATUMEINDEADRESHOUDING > end_date, end_date, GBADATUMEINDEADRESHOUDING)),
       timespan    = difftime(recordend, recordstart, units = "days")
     )
   
@@ -65,7 +70,7 @@ if (cfg$live_continuously) {
     select(RINPERSOONS, RINPERSOON, timespan) %>% 
     mutate(timespan = as.numeric(timespan)) %>% 
     group_by(RINPERSOONS, RINPERSOON) %>% 
-    summarize(total_days = sum(timespan)) %>% 
+    summarize(total_days = sum(timespan)) %>%  
     mutate(continuous_living = total_days >= cutoff_days) %>% 
     select(RINPERSOONS, RINPERSOON, continuous_living)
   
@@ -75,14 +80,18 @@ if (cfg$live_continuously) {
     filter(continuous_living) %>% 
     select(-continuous_living)
   
+  # free up memory
+  rm(adres_tab, days_tab)
 }
+
 
 #### PARENT LINK ####
 # add parent id to cohort
 kindouder_path <- file.path(loc$data_folder, loc$kind_data)
-cohort_dat <- left_join(
+cohort_dat <- inner_join(
   x = cohort_dat, 
-  y = read_sav(kindouder_path) %>% as_factor(only_labelled = TRUE, levels = "values"),
+  y = read_sav(kindouder_path) %>% select(-(XKOPPELNUMMER)) %>% 
+    as_factor(only_labelled = TRUE, levels = "values"),
   by = c("RINPERSOONS", "RINPERSOON")
 )
 
@@ -104,16 +113,24 @@ cohort_dat <-
     age_at_birth_pa = interval(birthdate_pa, birthdate) / years(1)
   ) %>% 
   filter(
-    age_at_birth_ma >= cfg$parent_min_age, age_at_birth_ma <= cfg$parent_max_age,
-    age_at_birth_pa >= cfg$parent_min_age, age_at_birth_pa <= cfg$parent_max_age
+    (is.na(age_at_birth_ma) | (age_at_birth_ma >= cfg$parent_min_age & age_at_birth_ma <= cfg$parent_max_age)),
+    (is.na(age_at_birth_pa) | (age_at_birth_pa >= cfg$parent_min_age & age_at_birth_pa <= cfg$parent_max_age))
   )
+
+# free up memory
+rm(gba_dat)
 
 
 #### REGION LINK ####
 
 # find childhood home
 adres_path <- file.path(loc$data_folder, loc$gbaao_data)
-adres_tab  <- read_sav(adres_path) %>% as_factor(only_labelled = TRUE, levels = "values")
+adres_tab  <- read_sav(adres_path) %>% 
+  as_factor(only_labelled = TRUE, levels = "values") %>%
+  mutate(
+    GBADATUMAANVANGADRESHOUDING = ymd(GBADATUMAANVANGADRESHOUDING),
+    GBADATUMEINDEADRESHOUDING = ymd(GBADATUMEINDEADRESHOUDING)
+  )
 
 
 if (cfg$childhood_home_first) {
@@ -126,6 +143,7 @@ if (cfg$childhood_home_first) {
     summarise(
       childhood_home = RINOBJECTNUMMER[1],
       type_childhood_home = SOORTOBJECTNUMMER[1])
+  
 } else if (cfg$childhood_home_date) {
   # take the address registration on a specific date
   home_tab <- 
@@ -141,25 +159,51 @@ if (cfg$childhood_home_first) {
       childhood_home = RINOBJECTNUMMER[1], 
       type_childhood_home = SOORTOBJECTNUMMER[1])
   
-# take the address registration to be their childhood home at 31 december of the year of birth
+  # take the address registration to be their childhood home at date of birth
 } else if (cfg$childhood_home_birthyear) {
+  
+  # function to get latest perined version of specified year
+  get_prnl_filename <- function(year) {
+    fl <- list.files(
+      path = file.path("G:/GezondheidWelzijn/PRNL/", year, "/"), 
+      pattern = paste0(year, "V[0-9]+(?i)(.sav)"),
+      full.names = TRUE
+    )
+    # return only the latest version
+    sort(fl, decreasing = TRUE)[1]
+  }
+  
+  # create perinatal data to obtain date of birth 
+  perined_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = character(),
+                        datumkind = double())
+  for (year in seq(format(dmy(cfg$child_birth_date_min), "%Y"), 
+                   format(dmy(cfg$child_birth_date_max), "%Y"))){
+    
+    perined_dat <- read_sav(get_prnl_filename(year), col_select = 
+                              c("rinpersoons_kind_uitgebreid", "rinpersoon_kind", 
+                                "datumkind")) %>% 
+      rename(RINPERSOONS = rinpersoons_kind_uitgebreid,
+             RINPERSOON = rinpersoon_kind) %>%
+      mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values")) %>%
+      filter(RINPERSOON %in% cohort_dat$RINPERSOON & RINPERSOONS %in% cohort_dat$RINPERSOONS) %>%
+      select(c("RINPERSOONS", "RINPERSOON", "datumkind")) %>%
+      bind_rows(perined_dat, .)
+  }
+  
+  # post-processing
+  perined_dat <- perined_dat %>% mutate(datumkind = ymd(datumkind))
+  
   home_tab <- 
     adres_tab %>% 
-    filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
-    mutate(
-      birth_year = format(GBADATUMAANVANGADRESHOUDING, "%Y"),
-      dec_year = ymd(paste(format(GBADATUMAANVANGADRESHOUDING, "%Y"), "1231")),
-      birth_year = ifelse(GBADATUMEINDEADRESHOUDING < dec_year, NA, birth_year) # take home registrations that are still open at 31 december
-    ) %>%
-    select(-(dec_year)) %>%
-    group_by(RINPERSOON, birth_year) %>% 
+    filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>%
+    inner_join(perined_dat) %>%
+    filter(datumkind %within% interval(GBADATUMAANVANGADRESHOUDING, GBADATUMEINDEADRESHOUDING)) %>%
+    group_by(RINPERSOONS, RINPERSOON) %>% 
     summarise(childhood_home = RINOBJECTNUMMER[1],
               type_childhood_home = SOORTOBJECTNUMMER[1])
   
-  # create birth_year variable to link home addresses at year of birth 
-  cohort_dat <- cohort_dat %>%
-    mutate(birth_year = format(birthdate, "%Y")) 
-
+  rm(perined_dat)
+  
 } else {
   # for each person, throw out the registrations from after they are 18 and select the longest-registered address from 0
   # to 18
@@ -178,9 +222,18 @@ if (cfg$childhood_home_first) {
 # add childhood home to data
 cohort_dat <- inner_join(cohort_dat, home_tab)
 
+# free up memory
+rm(adres_tab, home_tab)
+
 # clean the postcode table
 vslpc_path <- file.path(loc$data_folder, loc$postcode_data)
-vslpc_tab  <- read_sav(vslpc_path) %>% as_factor(only_labelled = TRUE, levels = "values")
+vslpc_tab  <- read_sav(vslpc_path) %>%
+  mutate(
+    SOORTOBJECTNUMMER = as_factor(SOORTOBJECTNUMMER, levels = "values"),
+    DATUMAANVPOSTCODENUMADRES = ymd(DATUMAANVPOSTCODENUMADRES),
+    DATUMEINDPOSTCODENUMADRES = ymd(DATUMEINDPOSTCODENUMADRES),
+    POSTCODENUM = ifelse(POSTCODENUM == "----", NA, POSTCODENUM)
+  )
 
 # only consider postal codes valid on target_date and create postcode-3 level
 vslpc_tab <- 
@@ -190,9 +243,8 @@ vslpc_tab <-
   select(SOORTOBJECTNUMMER, RINOBJECTNUMMER, postcode4 = POSTCODENUM, postcode3)
 
 # add the postal codes to the cohort
-cohort_dat <- left_join(cohort_dat, vslpc_tab, by = c("type_childhood_home" = "SOORTOBJECTNUMMER", 
-                                                      "childhood_home" = "RINOBJECTNUMMER"))
-
+cohort_dat <- inner_join(cohort_dat, vslpc_tab, by = c("type_childhood_home" = "SOORTOBJECTNUMMER", 
+                                                       "childhood_home" = "RINOBJECTNUMMER"))
 
 # add region/neighbourhood codes to cohort
 vslgwb_path <- file.path(loc$data_folder, loc$vslgwb_data) 
@@ -204,11 +256,11 @@ vslgwb_tab <-
   vslgwb_tab %>% 
   select("type_childhood_home" = "SOORTOBJECTNUMMER", 
          "childhood_home"      = "RINOBJECTNUMMER", 
-         "gemeente_code"       = paste0("Gem", year(dmy(cfg$gwb_target_date))), 
-         "wijk_code"           = paste0("WC", year(dmy(cfg$gwb_target_date))), 
-         "buurt_code"          = paste0("BC", year(dmy(cfg$gwb_target_date))))
+         "gemeente_code"       = paste0("gem", year(dmy(cfg$gwb_target_date))), 
+         "wijk_code"           = paste0("wc", year(dmy(cfg$gwb_target_date))), 
+         "buurt_code"          = paste0("bc", year(dmy(cfg$gwb_target_date))))
 
-cohort_dat <- left_join(cohort_dat, vslgwb_tab)
+cohort_dat <- inner_join(cohort_dat, vslgwb_tab)
 
 # add corop regions
 corop_tab  <- read_excel(loc$corop_data) %>%
@@ -216,7 +268,10 @@ corop_tab  <- read_excel(loc$corop_data) %>%
          "corop_code" = paste0("COROP", year(dmy(cfg$gwb_target_date)))) %>%
   unique()
 
-cohort_dat <- left_join(cohort_dat, corop_tab)
+cohort_dat <- inner_join(cohort_dat, corop_tab)
+
+# free up memory
+rm(vslpc_tab, vslgwb_tab, corop_tab)
 
 
 #### WRITE OUTPUT TO SCRATCH ####
