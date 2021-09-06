@@ -27,7 +27,7 @@ default:
     childhood_home_date: false
     childhood_home_year: "2015-12-31"
     
-     # Should we use the first address registration of a child at 31 december of the year of birth?
+    # take the address registration to be their childhood home at date of birth
     childhood_home_birthyear: false
     
     # If we do not, then use the longest address registration before cutoff_year:
@@ -42,8 +42,8 @@ default:
     cpi_base_year: 2018
     
     # Parent income year range
-    parent_income_year_min: 2006
-    parent_income_year_max: 2010
+    parent_income_year_min: 2003
+    parent_income_year_max: 2007
     
     #  Child income year range
     child_income_year_min: 2017
@@ -58,19 +58,20 @@ default:
   file_locations:
     # The data folder is the root folder of the cbs microdata tables
     data_folder: "cbsdata"
+
     # The scratch folder is used to write intermediate output
     scratch_folder: "scratch/main"
     
     # path to the cbs microdata
-    gba_data: "Bevolking/GBAPERSOONTAB/GBAPERSOON2018TABV2.sav"
-    gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2018V1.sav"
-    kind_data: "Bevolking/KINDOUDERTAB/KINDOUDER2018TABV1.sav"
-    postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2020031.sav"
-    vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav"
-    hoogste_opl_data: "Onderwijs/HOOGSTEOPLTAB/HOOGSTEOPL2018TABV3.sav"
+    gba_data: "Bevolking/GBAPERSOONTAB/2018/GBAPERSOON2018TABV2.sav"
+    gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2019BUSV1.sav"
+    kind_data: "Bevolking/KINDOUDERTAB/2018/KINDOUDER2018TABV1.sav"
+    postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2021031.sav"
+    vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2021TAB03V1.sav"
+    hoogste_opl_data: "Onderwijs/HOOGSTEOPLTAB/2018/HOOGSTEOPL2018TABV3.sav"
     spolis_data: "Spolis/SPOLISBUS"
-    secm_data: "InkomenBestedingen/SECMBUS/SECMBUS2018V1.sav"
-    zvwzorgkosten_data: "GezondheidWelzijn/ZVWZORGKOSTENTAB/ZVWZORGKOSTEN2017TABV1.sav"
+    secm_data: "InkomenBestedingen/SECMBUS/SECMBUSV20191.sav"
+    zvwzorgkosten_data: "GezondheidWelzijn/ZVWZORGKOSTENTAB/2018/ZVWZORGKOSTEN2018TABV2.sav"
 
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"

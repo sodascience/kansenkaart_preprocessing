@@ -36,18 +36,18 @@ school_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), WPOLEERJA
                      WPOTOETSADVIES = character(), WPOADVIESVO = character(), WPOADVIESHERZ = character())
 for (year in seq(as.integer(cfg$elementary_school_year_min), as.integer(cfg$elementary_school_year_max))) {
   school_dat <- 
-    # read file from disk
-    read_sav(get_inschrwpo_filename(year), 
-             col_select = c("RINPERSOONS", "RINPERSOON", "WPOLEERJAAR", "WPOREKENEN",
-                            "WPOTAALLV", "WPOTAALTV", "WPOTOETSADVIES", "WPOADVIESVO",
-                            "WPOADVIESHERZ")) %>% 
+      # read file from disk
+      read_sav(get_inschrwpo_filename(year), 
+               col_select = c("RINPERSOONS", "RINPERSOON", "WPOLEERJAAR", "WPOREKENEN",
+                              "WPOTAALLV", "WPOTAALTV", "WPOTOETSADVIES", "WPOADVIESVO",
+                              "WPOADVIESHERZ")) %>% 
     mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value")) %>%
-    # select only children that are in the cohort
-    filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
-    # add year
-    mutate(year = year) %>% 
-    # add to income children
-    bind_rows(school_dat, .)
+      # select only children that are in the cohort
+      filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
+      # add year
+      mutate(year = year) %>% 
+      # add to income children
+      bind_rows(school_dat, .)
 }
 
 # only keep pupils who are in group 8
@@ -108,7 +108,7 @@ cohort_dat <- cohort_dat %>%
                                                              51, 52, 53, 60, 61, 70), 1, 0),
     havo_plus_final      = ifelse(final_school_advice %in% c(60, 61, 70), 1, 0),
     vwo_plus_final       = ifelse(final_school_advice == 70, 1, 0)
-    
+ 
   )
 
 # replace NA

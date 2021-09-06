@@ -60,19 +60,20 @@ default:
 
   file_locations:
     # The data folder is the root folder of the cbs microdata tables
-    data_folder: "cbsdata"
+    data_folder: "G:/"
     # The scratch folder is used to write intermediate output
     scratch_folder: "scratch/youth_protection"
     
     # path to the cbs microdata
-    gba_data: "Bevolking/GBAPERSOONTAB/GBAPERSOON2018TABV2.sav"
-    gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2018V1.sav"
-    kind_data: "Bevolking/KINDOUDERTAB/KINDOUDER2018TABV1.sav"
-    postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2020031.sav"
-    vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav"
-    
+    gba_data: "Bevolking/GBAPERSOONTAB/2018/GBAPERSOON2018TABV2.sav"
+    gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2019BUSV1.sav"
+    kind_data: "Bevolking/KINDOUDERTAB/2018/KINDOUDER2018TABV1.sav"
+    postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2021031.sav"
+    vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2021TAB03V1.sav"
     
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
-    migration_data: "resources/LANDAKTUEELREF10.sav"
-    corop_data: "resources/gemeenten_corop_1981.xlsx"
+    migration_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/LANDAKTUEELREFV10.SAV"
+    corop_data: "K:/Utilities/Code_Listings/Gebieden in Nederland/Gemeenten en COROP vanaf 1981.xlsx"
+    
+  

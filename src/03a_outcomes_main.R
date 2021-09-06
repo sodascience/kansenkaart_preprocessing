@@ -154,8 +154,8 @@ hopl_tab <-
          OPLNIVSOI2016AGG4HGMETNIRWO = ifelse(OPLNIVSOI2016AGG4HGMETNIRWO == "----", NA, OPLNIVSOI2016AGG4HGMETNIRWO),
          OPLNIVSOI2016AGG4HBMETNIRWO = as.numeric(OPLNIVSOI2016AGG4HBMETNIRWO),
          OPLNIVSOI2016AGG4HGMETNIRWO = as.numeric(OPLNIVSOI2016AGG4HGMETNIRWO)
-  ) 
-
+         ) 
+  
 
 hopl_tab <-
   hopl_tab %>% 
@@ -326,7 +326,7 @@ secm_tab <-
   ) %>%
   distinct() %>% # keep unique records
   select(-c(AANVSECM, EINDSECM, SECM))
-
+  
 cohort_dat <- left_join(cohort_dat, secm_tab)
 
 # convert NA to 0
@@ -335,7 +335,7 @@ cohort_dat <- cohort_dat %>%
     employed = ifelse(is.na(employed), 0, employed),
     social_benefits = ifelse(is.na(social_benefits), 0, social_benefits),
     disability = ifelse(is.na(disability), 0, disability)
-  )
+    )
 
 # free up memory
 rm(secm_tab)
@@ -343,37 +343,37 @@ rm(secm_tab)
 #### HEALTH COSTS ####
 health_tab <-
   read_sav(file.path(loc$data_folder, loc$zvwzorgkosten_data),
-           col_select =  c("RINPERSOONS", "RINPERSOON", "ZVWKFARMACIE", "ZVWKGENBASGGZ",
-                           "ZVWKSPECGGZ", "ZVWKZIEKENHUIS", "ZVWKZIEKENVERVOER", "ZVWKEERSTELIJNSPSYCHO",
-                           "ZVWKGERIATRISCH", "ZVWKOPHOOGFACTOR", "ZVWKGEBOORTEZORG", "ZVWKGGZ",
-                           "ZVWKWYKVERPLEGING", "ZVWKHUISARTS", "ZVWKPARAMEDISCH", "ZVWKBUITENLAND",
-                           "ZVWKHULPMIDDEL", "ZVWKOVERIG", "ZVWKMONDZORG")) %>%
+                     col_select =  c("RINPERSOONS", "RINPERSOON", "ZVWKFARMACIE", "ZVWKGENBASGGZ",
+                                     "ZVWKSPECGGZ", "ZVWKZIEKENHUIS", "ZVWKZIEKENVERVOER", "ZVWKEERSTELIJNSPSYCHO",
+                                     "ZVWKGERIATRISCH", "ZVWKOPHOOGFACTOR", "ZVWKGEBOORTEZORG", "ZVWKGGZ",
+                                     "ZVWKWYKVERPLEGING", "ZVWKHUISARTS", "ZVWKPARAMEDISCH", "ZVWKBUITENLAND",
+                                     "ZVWKHULPMIDDEL", "ZVWKOVERIG", "ZVWKMONDZORG")) %>%
   as_factor(only_labelled = TRUE, levels = "values")
 
 health_tab <-
   health_tab %>%
   mutate_at(names(health_tab %>% select(-c(RINPERSOONS, RINPERSOON))),
             function(x) ifelse(x < 0, 0, x)  # replace negative values with 0
-  ) %>%
+            ) %>%
   mutate(pharma_costs       = ifelse(ZVWKFARMACIE > 0, 1, 0),
          basis_ggz_costs    = ifelse(ZVWKGENBASGGZ > 0, 1, 0),
          specialist_costs   = ifelse(ZVWKSPECGGZ > 0, 1, 0),
          hospital_costs     = ifelse(ZVWKZIEKENHUIS > 0, 1, 0)
-  )
+         )
 
 # sum of all healthcare costs
 health_tab <-
   health_tab %>%
   rowwise() %>%
   mutate(
-    total_health_costs = sum(c(ZVWKFARMACIE, ZVWKGENBASGGZ, ZVWKSPECGGZ, ZVWKZIEKENHUIS,
-                               ZVWKZIEKENVERVOER, ZVWKEERSTELIJNSPSYCHO, ZVWKGERIATRISCH,
-                               ZVWKOPHOOGFACTOR, ZVWKGEBOORTEZORG, ZVWKGGZ, ZVWKWYKVERPLEGING,
-                               ZVWKHUISARTS, ZVWKPARAMEDISCH, ZVWKBUITENLAND, ZVWKHULPMIDDEL,
-                               ZVWKOVERIG, ZVWKMONDZORG), na.rm = TRUE)
-  ) %>%
+total_health_costs = sum(c(ZVWKFARMACIE, ZVWKGENBASGGZ, ZVWKSPECGGZ, ZVWKZIEKENHUIS,
+                         ZVWKZIEKENVERVOER, ZVWKEERSTELIJNSPSYCHO, ZVWKGERIATRISCH,
+                         ZVWKOPHOOGFACTOR, ZVWKGEBOORTEZORG, ZVWKGGZ, ZVWKWYKVERPLEGING,
+                         ZVWKHUISARTS, ZVWKPARAMEDISCH, ZVWKBUITENLAND, ZVWKHULPMIDDEL,
+                         ZVWKOVERIG, ZVWKMONDZORG), na.rm = TRUE)
+) %>%
   select(RINPERSOONS, RINPERSOON, pharma_costs, basis_ggz_costs, specialist_costs,
-         hospital_costs, total_health_costs)
+          hospital_costs, total_health_costs)
 
 cohort_dat <- left_join(cohort_dat, health_tab)
 

@@ -9,8 +9,8 @@ default:
     
     # The cohort should live continuously in NL in the following period
     live_continuously: false
-    child_live_start: "01/01/2016"
-    child_live_end: "31/12/2018"
+    child_live_start: ""
+    child_live_end: ""
     
     # The cohort is allowed to be unregistered for this many days 
     # in this period
@@ -47,25 +47,35 @@ default:
     
     # censor income above this value
     income_censoring_value: 1200000
-  
+    
+    # remove gestational age at given days
+    cut_off_days_min: 168
+    cut_off_days_max: 294
+    
+    # remove birth below given day
+    cut_off_mortality_day: 7
+    
     
   file_locations:
     # The data folder is the root folder of the cbs microdata tables
-    data_folder: "cbsdata"
+    data_folder: "G:/"
     # The scratch folder is used to write intermediate output
     scratch_folder: "scratch/perinatal"
     
     # path to the cbs microdata
-    gba_data: "Bevolking/GBAPERSOONTAB/GBAPERSOON2018TABV2.sav"
-    gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2018V1.sav"
-    kind_data: "Bevolking/KINDOUDERTAB/KINDOUDER2018TABV1.sav"
-    postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2020031.sav"
-    vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2019TAB03V1.sav"
+    gba_data: "Bevolking/GBAPERSOONTAB/2018/GBAPERSOON2018TABV2.sav"
+    gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2019BUSV1.sav"
+    kind_data: "Bevolking/KINDOUDERTAB/2018/KINDOUDER2018TABV1.sav"
+    postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2021031.sav"
+    vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2021TAB03V1.sav"
     
 
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
-    boys_weight_data: "resources/Percentielen - Jongens.xlsx"
-    girls_weight_data: "resources/Percentielen - Meisjes.xlsx"
-    migration_data: "resources/LANDAKTUEELREF10.sav"
-    corop_data: "resources/gemeenten_corop_1981.xlsx"
+    migration_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/LANDAKTUEELREFV10.SAV"
+    corop_data: "K:/Utilities/Code_Listings/Gebieden in Nederland/Gemeenten en COROP vanaf 1981.xlsx"
+    birthweight_data: "resources/Hoftiezer_Geboortegewicht curves.xlsx"
+    boys_sheet: "Tabel jongens"
+    girls_sheet: "Tabel meisjes"
+    
+    

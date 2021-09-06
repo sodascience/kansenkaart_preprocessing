@@ -40,7 +40,7 @@ for (year in seq.int(cfg$high_school_year_min, cfg$high_school_year_max)) {
       education = ifelse(education == "----", NA, education),
       education = as.numeric(education),
       year_age_16 = year
-    ) %>%
+      ) %>%
     # add to income parents
     bind_rows(school_dat, .)
 }
@@ -51,7 +51,7 @@ cohort_dat <- cohort_dat %>%
   mutate(year_age_16 = as.integer(format(birthdate, "%Y")) + 16)
 
 cohort_dat <- inner_join(cohort_dat, school_dat, 
-                         by = c("RINPERSOON", "RINPERSOONS", "year_age_16"))
+                        by = c("RINPERSOON", "RINPERSOONS", "year_age_16"))
 
 
 # create dummy variables

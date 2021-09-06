@@ -48,31 +48,31 @@ get_health_filename <- function(year) {
 
 # create function for cleaning
 load_health_data <- function(file) {
-  
+
   health_tab <- read_sav(file,
                          col_select = c("RINPERSOONS", "RINPERSOON", "ZVWKFARMACIE", "ZVWKGENBASGGZ", 
-                                        "ZVWKSPECGGZ", "ZVWKZIEKENHUIS", "ZVWKZIEKENVERVOER", "ZVWKEERSTELIJNSPSYCHO",
-                                        "ZVWKGERIATRISCH", "ZVWKOPHOOGFACTOR", "ZVWKGEBOORTEZORG", "ZVWKGGZ",
-                                        "ZVWKWYKVERPLEGING", "ZVWKHUISARTS", "ZVWKPARAMEDISCH", "ZVWKBUITENLAND",
-                                        "ZVWKHULPMIDDEL", "ZVWKOVERIG", "ZVWKMONDZORG")) %>% 
+                   "ZVWKSPECGGZ", "ZVWKZIEKENHUIS", "ZVWKZIEKENVERVOER", "ZVWKEERSTELIJNSPSYCHO",
+                   "ZVWKGERIATRISCH", "ZVWKOPHOOGFACTOR", "ZVWKGEBOORTEZORG", "ZVWKGGZ",
+                   "ZVWKWYKVERPLEGING", "ZVWKHUISARTS", "ZVWKPARAMEDISCH", "ZVWKBUITENLAND",
+                   "ZVWKHULPMIDDEL", "ZVWKOVERIG", "ZVWKMONDZORG")) %>% 
     as_factor(only_labelled = TRUE, levels = "values") 
-  
+    
   health_tab <- 
     health_tab %>%
     # replace negative values with 0
     mutate(across(starts_with("ZVWK"), function(x) ifelse(x < 0, 0, x)))  
-  
+    
   # sum of all healthcare costs
   health_tab <- 
     health_tab %>%
-    rowwise() %>%
+  rowwise() %>%
     mutate(
       child_total_health_costs = sum(ZVWKFARMACIE, ZVWKGENBASGGZ, ZVWKSPECGGZ, ZVWKZIEKENHUIS, 
                                      ZVWKZIEKENVERVOER, ZVWKEERSTELIJNSPSYCHO,
                                      ZVWKGERIATRISCH, ZVWKOPHOOGFACTOR, ZVWKGEBOORTEZORG, ZVWKGGZ,
                                      ZVWKWYKVERPLEGING, ZVWKHUISARTS, ZVWKPARAMEDISCH, ZVWKBUITENLAND,
                                      ZVWKHULPMIDDEL, ZVWKOVERIG, ZVWKMONDZORG, na.rm = TRUE) 
-    ) %>%
+  ) %>%
     select(RINPERSOONS, RINPERSOON, child_total_health_costs)
   
   # deflate
@@ -92,7 +92,7 @@ load_health_data <- function(file) {
   
   return(health_tab)
 }
-
+  
 health_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), 
                      child_total_health_costs = double(), year = integer())
 for (year in seq.int(cfg$health_costs_year_min, cfg$health_costs_year_max)) {
@@ -105,7 +105,7 @@ for (year in seq.int(cfg$health_costs_year_min, cfg$health_costs_year_max)) {
 health_dat <- health_dat %>%
   group_by(RINPERSOONS, RINPERSOON) %>%
   summarise(child_total_health_costs = mean(child_total_health_costs))
-
+ 
 cohort_dat <- left_join(cohort_dat, health_dat)
 
 # change NA to 0

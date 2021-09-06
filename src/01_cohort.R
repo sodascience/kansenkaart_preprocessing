@@ -23,8 +23,8 @@ gba_dat <-
   mutate(birthdate = dmy(paste(GBAGEBOORTEDAG, GBAGEBOORTEMAAND, GBAGEBOORTEJAAR, sep = "-"))) %>% 
   select(-GBAGEBOORTEJAAR, -GBAGEBOORTEMAAND, -GBAGEBOORTEDAG) %>%
   mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
-         GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
-         GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
+         # GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
+         # GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
          GBAGENERATIE = as_factor(GBAGENERATIE, levels = "labels"),
          GBAGESLACHT = as_factor(GBAGESLACHT, levels = "labels"))
 
@@ -109,8 +109,8 @@ cohort_dat <-
 cohort_dat <- 
   cohort_dat %>% 
   mutate(
-    age_at_birth_ma = interval(birthdate_ma, birthdate) / years(1),
-    age_at_birth_pa = interval(birthdate_pa, birthdate) / years(1)
+    age_at_birth_ma = abs(interval(birthdate_ma, birthdate) / years(1)),
+    age_at_birth_pa = abs(interval(birthdate_pa, birthdate) / years(1))
   ) %>% 
   filter(
     (is.na(age_at_birth_ma) | (age_at_birth_ma >= cfg$parent_min_age & age_at_birth_ma <= cfg$parent_max_age)),
@@ -159,7 +159,7 @@ if (cfg$childhood_home_first) {
       childhood_home = RINOBJECTNUMMER[1], 
       type_childhood_home = SOORTOBJECTNUMMER[1])
   
-  # take the address registration to be their childhood home at date of birth
+# take the address registration to be their childhood home at date of birth
 } else if (cfg$childhood_home_birthyear) {
   
   # function to get latest perined version of specified year
@@ -233,7 +233,7 @@ vslpc_tab  <- read_sav(vslpc_path) %>%
     DATUMAANVPOSTCODENUMADRES = ymd(DATUMAANVPOSTCODENUMADRES),
     DATUMEINDPOSTCODENUMADRES = ymd(DATUMEINDPOSTCODENUMADRES),
     POSTCODENUM = ifelse(POSTCODENUM == "----", NA, POSTCODENUM)
-  )
+    )
 
 # only consider postal codes valid on target_date and create postcode-3 level
 vslpc_tab <- 
@@ -244,7 +244,7 @@ vslpc_tab <-
 
 # add the postal codes to the cohort
 cohort_dat <- inner_join(cohort_dat, vslpc_tab, by = c("type_childhood_home" = "SOORTOBJECTNUMMER", 
-                                                       "childhood_home" = "RINOBJECTNUMMER"))
+                                                      "childhood_home" = "RINOBJECTNUMMER"))
 
 # add region/neighbourhood codes to cohort
 vslgwb_path <- file.path(loc$data_folder, loc$vslgwb_data) 
