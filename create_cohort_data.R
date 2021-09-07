@@ -6,7 +6,7 @@
 
 # input the desired config file here:
 
-cfg_file <- "config/main.yml"
+cfg_file <- "config/high_school.yml"
 
 #### CONFIGURATION ####
 # load the configuration
