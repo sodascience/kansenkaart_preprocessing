@@ -97,9 +97,16 @@ for (year in seq(as.integer(cfg$child_income_year_min), as.integer(cfg$child_inc
 }
 
 # remove negative and NA incomes
-income_children <-
-  income_children %>% 
-  mutate(income = ifelse(income == 9999999999 | income < 0, NA, income)) 
+if (as.integer(cfg$child_income_year_max) < 2011) {
+  income_children <-
+    income_parents %>% 
+    mutate(income = ifelse(income == 999999999 | income < 0, NA, income)) 
+  
+} else {
+  income_children <-
+    income_children %>% 
+    mutate(income = ifelse(income == 9999999999 | income < 0, NA, income)) 
+}
 
 # censor income above a certain value
 income_children <-
@@ -144,6 +151,7 @@ cohort_dat <-
     income_perc = income_rank / max(income_rank)
   )
 
+
 #### HIGHER EDUCATION ####
 hopl_tab <- 
   read_sav(file.path(loc$data_folder, loc$hoogste_opl_data)) %>% 
@@ -187,14 +195,15 @@ cohort_dat <- cohort_dat %>%
     wo_attained = ifelse(is.na(wo_attained), 0, wo_attained)
   )
 
+
 #### HOURLY INCOME ####
 # these come from the spolis tab
 get_spolis_filename <- function(year) {
   # function to get latest ipi version of specified year
   # get all ipi files with the specified year
   fl <- list.files(
-    path = file.path(loc$data_folder, loc$spolis_data, "/", year),
-    pattern = paste0("SPOLISBUS", year, "V[0-9]+\\.sav"), 
+    path = file.path(loc$data_folder, loc$spolis_data, year),
+    pattern = paste0("\\.sav"), 
     full.names = TRUE
   )
   # return only the latest version
@@ -339,6 +348,7 @@ cohort_dat <- cohort_dat %>%
 
 # free up memory
 rm(secm_tab)
+
 
 #### HEALTH COSTS ####
 health_tab <-
