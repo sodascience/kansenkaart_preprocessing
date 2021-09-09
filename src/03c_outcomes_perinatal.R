@@ -40,7 +40,7 @@ girls_weight_tab <- read_excel(loc$birthweight_data, sheet = loc$girls_sheet, sk
 # function to get latest perined version of specified year
 get_prnl_filename <- function(year) {
   fl <- list.files(
-    path = file.path(loc$data_folder, "GezondheidWelzijn/PRNL/", year, "/"), 
+    path = file.path(loc$data_folder, "GezondheidWelzijn/PRNL/", year), 
     pattern = paste0(year, "V[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -104,7 +104,7 @@ perined_dat <- perined_dat %>%
 # function to get latest do version of specified year 
 get_do_filename <- function(year) {
   fl <- list.files(
-    path = file.path("G:/GezondheidWelzijn/DO/"), 
+    path = file.path(loc$data_folder, "GezondheidWelzijn/DO/"), 
     pattern = paste0("DO", year, "V[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -115,7 +115,7 @@ get_do_filename <- function(year) {
 # function to get latest do version of specified year 
 get_do_map_filename <- function(year) {
   fl <- list.files(
-    path = file.path("G:/GezondheidWelzijn/DO/", year, "/"), 
+    path = file.path(loc$data_folder, "GezondheidWelzijn/DO/", year), 
     pattern = paste0("DO ", year, "V[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -168,7 +168,7 @@ death_dat <- death_dat %>%
 # function to get latest doodoorztab version of specified year 
 get_dood_filename <- function(year) {
   fl <- list.files(
-    path = file.path("G:/GezondheidWelzijn/DOODOORZTAB/", year, "/"),
+    path = file.path(loc$data_folder, "GezondheidWelzijn/DOODOORZTAB/", year),
     pattern = paste0("DOODOORZ", year, "TABV[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -179,7 +179,7 @@ get_dood_filename <- function(year) {
 # function to get latest gbaoverlijdenstab version of specified year 
 get_gba_filename <- function(year) {
   fl <- list.files(
-    path = file.path("G:/Bevolking/GBAOVERLIJDENTAB/", year, "/"),
+    path = file.path(loc$data_folder, "Bevolking/GBAOVERLIJDENTAB", year),
     pattern = "(?i)(.sav)",
     full.names = TRUE
   )
@@ -277,7 +277,7 @@ get_ipi_filename <- function(year) {
   # function to get latest ipi version of specified year
   # get all ipi files with the specified year
   fl <- list.files(
-    path = file.path("G:/InkomenBestedingen/INTEGRAAL PERSOONLIJK INKOMEN/", year),
+    path = file.path(loc$data_folder, "InkomenBestedingen/INTEGRAAL PERSOONLIJK INKOMEN/", year),
     pattern = paste0("PERSOONINK", year), 
     full.names = TRUE
   )
@@ -289,7 +289,7 @@ get_inpa_filename <- function(year) {
   # function to get latest inpa version of specified year
   # get all inpa files with the specified year
   fl <- list.files(
-    path = file.path("G:/InkomenBestedingen/INPATAB/"),
+    path = file.path(loc$data_folder, "InkomenBestedingen/INPATAB/"),
     pattern = paste0("INPA", year), 
     full.names = TRUE
   )
@@ -342,7 +342,7 @@ get_ihi_filename <- function(year) {
   # function to get latest ihi version of specified year
   # get all ihi files with the specified year
   fl <- list.files(
-    path = file.path("G:/InkomenBestedingen/INTEGRAAL HUISHOUDENS INKOMEN/", year),
+    path = file.path(loc$data_folder, "InkomenBestedingen/INTEGRAAL HUISHOUDENS INKOMEN/", year),
     pattern = paste0(year, "TABV[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -354,7 +354,7 @@ get_inha_filename <- function(year) {
   # function to get latest inha version of specified year
   # get all inha files with the specified year
   fl <- list.files(
-    path = file.path("G:/InkomenBestedingen/INHATAB/"),
+    path = file.path(loc$data_folder, "InkomenBestedingen/INHATAB/"),
     pattern = paste0(year, "TABV[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
