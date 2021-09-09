@@ -40,7 +40,7 @@ girls_weight_tab <- read_excel(loc$birthweight_data, sheet = loc$girls_sheet, sk
 # function to get latest perined version of specified year
 get_prnl_filename <- function(year) {
   fl <- list.files(
-    path = file.path("G:/GezondheidWelzijn/PRNL/", year, "/"), 
+    path = file.path(loc$data_folder, "GezondheidWelzijn/PRNL/", year, "/"), 
     pattern = paste0(year, "V[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -94,7 +94,7 @@ rm(boys_weight_tab, girls_weight_tab)
 
 # post-processing
 perined_dat <- perined_dat %>% 
-  mutate(datumkind = ymd(datumkind))
+  mutate(datumkind = dmy(datumkind))
 
 
 #### DO AND DOODOORZTAB ####

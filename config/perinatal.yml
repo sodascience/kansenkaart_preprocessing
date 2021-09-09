@@ -27,7 +27,7 @@ default:
     childhood_home_date: false
     childhood_home_year: "2015-12-31"
     
-    # Should we use the first address registration of a child at 31 december of the year of birth?
+    # take the address registration to be their childhood home at date of birth
     childhood_home_birthyear: true
     
     # If we do not, then use the longest address registration before cutoff_year:
@@ -58,7 +58,7 @@ default:
     
   file_locations:
     # The data folder is the root folder of the cbs microdata tables
-    data_folder: "G:/"
+    data_folder: "cbsdata"
     # The scratch folder is used to write intermediate output
     scratch_folder: "scratch/perinatal"
     
@@ -72,8 +72,8 @@ default:
 
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
-    migration_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/LANDAKTUEELREFV10.SAV"
-    corop_data: "K:/Utilities/Code_Listings/Gebieden in Nederland/Gemeenten en COROP vanaf 1981.xlsx"
+    migration_data: "resources/LANDAKTUEELREF10.sav"
+    corop_data: "resources/gemeenten_corop_1981.xlsx"
     birthweight_data: "resources/Hoftiezer_Geboortegewicht curves.xlsx"
     boys_sheet: "Tabel jongens"
     girls_sheet: "Tabel meisjes"

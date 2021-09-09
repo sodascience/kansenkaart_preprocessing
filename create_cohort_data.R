@@ -6,7 +6,7 @@
 
 # input the desired config file here:
 
-cfg_file <- "config/high_school.yml"
+cfg_file <- "config/perinatal.yml"
 
 #### CONFIGURATION ####
 # load the configuration

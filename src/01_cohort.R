@@ -165,7 +165,7 @@ if (cfg$childhood_home_first) {
   # function to get latest perined version of specified year
   get_prnl_filename <- function(year) {
     fl <- list.files(
-      path = file.path("G:/GezondheidWelzijn/PRNL/", year, "/"), 
+      path = file.path(loc$data_folder, "GezondheidWelzijn/PRNL/", year, "/"), 
       pattern = paste0(year, "V[0-9]+(?i)(.sav)"),
       full.names = TRUE
     )
@@ -191,7 +191,7 @@ if (cfg$childhood_home_first) {
   }
   
   # post-processing
-  perined_dat <- perined_dat %>% mutate(datumkind = ymd(datumkind))
+  perined_dat <- perined_dat %>% mutate(datumkind = dmy(datumkind))
   
   home_tab <- 
     adres_tab %>% 

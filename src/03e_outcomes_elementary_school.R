@@ -95,8 +95,8 @@ cohort_dat <- cohort_dat %>%
     
     # cito test outcomes
     vmbo_hoog_plus_test = ifelse(WPOTOETSADVIES %in% c(42, 44, 60, 61, 70), 1, 0),
-    havo.plus.test      = ifelse(WPOTOETSADVIES %in% c(60, 61, 70), 1, 0),
-    vwo.plus.test       = ifelse(WPOTOETSADVIES == 70, 1, 0),
+    havo_plus_test      = ifelse(WPOTOETSADVIES %in% c(60, 61, 70), 1, 0),
+    vwo_plus_test       = ifelse(WPOTOETSADVIES == 70, 1, 0),
     
     # final high school advice 
     # replace 80 (= Geen specifiek advies mogelijk) with NA
@@ -120,8 +120,8 @@ cohort_dat <- cohort_dat %>%
     
     # cito test outcomes
     vmbo_hoog_plus_test = ifelse(is.na(WPOTOETSADVIES), NA, vmbo_hoog_plus_test),
-    havo.plus.test      = ifelse(is.na(WPOTOETSADVIES), NA, havo.plus.test),
-    vwo.plus.test       = ifelse(is.na(WPOTOETSADVIES), NA, vwo.plus.test),
+    havo_plus_test      = ifelse(is.na(WPOTOETSADVIES), NA, havo_plus_test),
+    vwo_plus_test       = ifelse(is.na(WPOTOETSADVIES), NA, vwo_plus_test),
     
     # final school advice outcomes
     vmbo_hoog_plus_final = ifelse(is.na(final_school_advice), NA, vmbo_hoog_plus_final),
