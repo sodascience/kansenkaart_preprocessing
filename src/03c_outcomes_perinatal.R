@@ -76,7 +76,6 @@ for (year in seq(format(dmy(cfg$child_birth_date_min), "%Y"),
            "amddd", "datumkind", "geslachtkind",
            "gewichtkind_ruw", "meerling", "sterfte", "year")) %>%
   bind_rows(perined_dat, .)
-
 }
 
 # remove gestational age below given days
