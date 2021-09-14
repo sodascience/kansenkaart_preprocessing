@@ -41,7 +41,7 @@ get_ipi_filename <- function(year) {
   # function to get latest ipi version of specified year
   # get all ipi files with the specified year
   fl <- list.files(
-    path = file.path("G:/InkomenBestedingen/INTEGRAAL PERSOONLIJK INKOMEN/", year),
+    path = file.path("cbsdata/InkomenBestedingen/INTEGRAAL PERSOONLIJK INKOMEN/", year),
     pattern = paste0("PERSOONINK", year), 
     full.names = TRUE
   )
@@ -53,7 +53,7 @@ get_inpa_filename <- function(year) {
   # function to get latest inpa version of specified year
   # get all inpa files with the specified year
   fl <- list.files(
-    path = file.path("G:/InkomenBestedingen/INPATAB/"),
+    path = file.path("cbsdata/InkomenBestedingen/INPATAB/"),
     pattern = paste0("INPA", year), 
     full.names = TRUE
   )
@@ -107,7 +107,7 @@ get_ihi_filename <- function(year) {
   # function to get latest ihi version of specified year
   # get all ihi files with the specified year
   fl <- list.files(
-    path = file.path("G:/InkomenBestedingen/INTEGRAAL HUISHOUDENS INKOMEN/", year),
+    path = file.path("cbsdata/InkomenBestedingen/INTEGRAAL HUISHOUDENS INKOMEN/", year),
     pattern = paste0(year, "TABV[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -119,7 +119,7 @@ get_inha_filename <- function(year) {
   # function to get latest inha version of specified year
   # get all inha files with the specified year
   fl <- list.files(
-    path = file.path("G:/InkomenBestedingen/INHATAB/"),
+    path = file.path("cbsdata/InkomenBestedingen/INHATAB/"),
     pattern = paste0(year, "TABV[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -129,7 +129,6 @@ get_inha_filename <- function(year) {
 
 income_household <- tibble(RINPERSOONSHKW = factor(), RINPERSOONHKW = character(), 
                            household_income = double(), year = integer())
-
 for (year in seq(as.integer(cfg$parent_income_year_min), 
                  as.integer(cfg$parent_income_year_max))) {
   
@@ -236,8 +235,8 @@ gba_dat <-
                                     "GBAGEBOORTELAND", "GBAGENERATIE", 
                                     "GBAHERKOMSTGROEPERING")) %>% 
   mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
-         GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
-         GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
+         # GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
+         # GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
          GBAGENERATIE = as_factor(GBAGENERATIE, levels = "labels"))
 
 
@@ -300,11 +299,12 @@ cohort_dat <-
 
 #### MIGRATION BACKGROUND ####
 western_tab <- read_sav(loc$migration_data, 
-                        col_select = c("LAND", "LANDTYPE")) %>%
-  mutate(
-    LAND = as_factor(LAND, levels = "labels"),
-    LANDTYPE = as_factor(LANDTYPE, levels = "labels")
-  )
+                        col_select = c("LAND", "LANDTYPE")) 
+# %>%
+#   mutate(
+#     LAND = as_factor(LAND, levels = "labels"),
+#     LANDTYPE = as_factor(LANDTYPE, levels = "labels")
+#   )
 
 # create migration variable with origin without third generation
 cohort_dat <- cohort_dat %>%

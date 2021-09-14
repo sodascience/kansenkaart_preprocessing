@@ -18,7 +18,7 @@ library(readxl)
 # function to get latest perined version of specified year
 get_prnl_filename <- function(year) {
   fl <- list.files(
-    path = file.path("G:/GezondheidWelzijn/PRNL/", year, "/"), 
+    path = file.path(loc$data_folder, "GezondheidWelzijn/PRNL/", year), 
     pattern = paste0(year, "V[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -72,7 +72,7 @@ cohort_dat <- cohort_dat %>%
 # function to get latest do version of specified year 
 get_do_filename <- function(year) {
   fl <- list.files(
-    path = file.path("G:/GezondheidWelzijn/DO/"), 
+    path = file.path(loc$data_folder, "GezondheidWelzijn/DO/"), 
     pattern = paste0("DO", year, "V[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -83,7 +83,7 @@ get_do_filename <- function(year) {
 # function to get latest do version of specified year 
 get_do_map_filename <- function(year) {
   fl <- list.files(
-    path = file.path("G:/GezondheidWelzijn/DO/", year, "/"), 
+    path = file.path(loc$data_folder, "GezondheidWelzijn/DO/", year), 
     pattern = paste0("DO ", year, "V[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -136,7 +136,7 @@ death_dat <- death_dat %>%
 # function to get latest doodoorztab version of specified year 
 get_dood_filename <- function(year) {
   fl <- list.files(
-    path = file.path("G:/GezondheidWelzijn/DOODOORZTAB/", year, "/"),
+    path = file.path(loc$data_folder, "GezondheidWelzijn/DOODOORZTAB/", year),
     pattern = paste0("DOODOORZ", year, "TABV[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -147,7 +147,7 @@ get_dood_filename <- function(year) {
 # function to get latest gbaoverlijdenstab version of specified year 
 get_gba_filename <- function(year) {
   fl <- list.files(
-    path = file.path("G:/Bevolking/GBAOVERLIJDENTAB/", year, "/"),
+    path = file.path(loc$data_folder, "Bevolking/GBAOVERLIJDENTAB/", year),
     pattern = "(?i)(.sav)",
     full.names = TRUE
   )
@@ -199,7 +199,7 @@ rm(death_dat)
 cohort_dat <- cohort_dat %>%
   mutate(
     datumkind = ymd(datumkind),
-    diff_days = as.numeric(difftime(date_of_death, datumkind, units = "days"))
+    diff_days = abs(as.numeric(difftime(date_of_death, datumkind, units = "days")))
   ) 
 
 

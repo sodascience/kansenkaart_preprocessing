@@ -5,10 +5,6 @@
 # (c) ODISSEI Social Data Science team 2021
 
 
-# clean workspace
-rm(list=ls())
-setwd("H:/IGM project/kansenkaart_preprocessing")
-
 # input the desired config file here:
 cfg_file <- "config/child_mortality.yml"
 

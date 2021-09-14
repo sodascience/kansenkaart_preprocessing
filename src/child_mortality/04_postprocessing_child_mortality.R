@@ -16,12 +16,8 @@ library(readxl)
 cohort_dat <- read_rds(file.path(loc$scratch_folder, "03_outcomes.rds"))
 
 
-# post-processing
-cohort_dat <- cohort_dat %>%
-  mutate(
-    male = ifelse(geslachtkind == "jongen", 1, 0),
-    income_household_perc = 100 * income_household_perc
-  )
+
+
 
 
 # save as cohort name

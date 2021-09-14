@@ -30,12 +30,10 @@ default:
     cut_off_days_min: 168
     cut_off_days_max: 294
     
-
-    
     
   file_locations:
     # The data folder is the root folder of the cbs microdata tables
-    data_folder: "G:/"
+    data_folder: "cbsdata"
     # The scratch folder is used to write intermediate output
     scratch_folder: "scratch/child_mortality"
     
@@ -49,7 +47,5 @@ default:
 
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
-    migration_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/LANDAKTUEELREFV10.SAV"
-    corop_data: "K:/Utilities/Code_Listings/Gebieden in Nederland/Gemeenten en COROP vanaf 1981.xlsx"
-    
-    
+    migration_data: "resources/LANDAKTUEELREF10.sav"
+    corop_data: "resources/gemeenten_corop_1981.xlsx"
