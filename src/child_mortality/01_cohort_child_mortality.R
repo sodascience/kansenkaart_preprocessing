@@ -195,7 +195,7 @@ cohort_dat <- left_join(cohort_dat, death_dat)
 rm(death_dat)
 
 
-# create diffence between birth and death date
+# create difference between birth and death date
 cohort_dat <- cohort_dat %>%
   mutate(
     datumkind = ymd(datumkind),

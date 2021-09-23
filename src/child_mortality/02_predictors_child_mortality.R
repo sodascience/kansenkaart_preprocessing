@@ -269,7 +269,6 @@ cohort_dat <- cohort_dat %>%
 # and the child is native (0)
 cohort_dat <- 
   cohort_dat %>%
-  # mutate(across(c("GBAGENERATIE", "GBAGENERATIE_ma"), as.character)) %>% 
   mutate(
     GBAGENERATIE_third = as.character(GBAGENERATIE),
     GBAGENERATIE_third = ifelse(
@@ -283,9 +282,6 @@ cohort_dat <-
 # replace gbaherkomstgroepering if the child is third generation
 cohort_dat <- 
   cohort_dat %>%
-  # mutate(
-  #   across(c(GBAHERKOMSTGROEPERING, GBAHERKOMSTGROEPERING_ma), as.character)
-  # ) %>%
   mutate(
     # third generation child gets mom's origin
     GBAHERKOMSTGROEPERING_third = ifelse(

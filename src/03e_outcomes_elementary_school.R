@@ -72,14 +72,6 @@ cohort_dat <- cohort_dat %>%
   mutate(across(c("WPOREKENEN", "WPOTAALLV", "WPOTAALTV",
                   "WPOTOETSADVIES", "WPOADVIESVO", "WPOADVIESHERZ"),
                 as.character)) %>%
-  mutate(
-    WPOREKENEN = ifelse(WPOREKENEN == "", NA, WPOREKENEN),
-    WPOTAALLV = ifelse(WPOTAALLV == "", NA, WPOTAALLV),
-    WPOTAALTV = ifelse(WPOTAALTV == "", NA, WPOTAALTV),
-    WPOTOETSADVIES = ifelse(WPOTOETSADVIES == "", NA, WPOTOETSADVIES),
-    WPOADVIESVO = ifelse(WPOADVIESVO == "", NA, WPOADVIESVO),
-    WPOADVIESHERZ = ifelse(WPOADVIESHERZ == "", NA, WPOADVIESHERZ)
-  )  %>%
   mutate(across(c("WPOREKENEN", "WPOTAALLV", "WPOTAALTV",
                   "WPOTOETSADVIES", "WPOADVIESVO", "WPOADVIESHERZ"),
                 as.numeric))
