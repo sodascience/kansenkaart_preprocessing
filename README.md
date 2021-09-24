@@ -12,7 +12,7 @@ We begin by measuring the average later-life outcomes (e.g., income) of children
 
 These final results are available on the interactive website [KansenKaart.nl](https://kansenkaart.nl/), which includes outcomes ranging from the field of health, education, to economic productivity. 
 
-So far, we have a total of 34 outcomes derived from five cohorts. These five cohorts are created using this repository. More information on the cohorts can be found [here]( https://github.com/sodascience/kansenkaart_preprocessing). The final estimates of these 34 outcomes are created using the repository [kansenkaart analysis](https://github.com/sodascience/kansenkaart_analysis).
+So far, we have a total of 34 outcomes derived from five cohorts. These five cohorts are created using this repository. More information on the cohorts can be found [here](https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/COHORTS.md). The final estimates of these 34 outcomes are created using the repository [kansenkaart analysis](https://github.com/sodascience/kansenkaart_analysis).
 
 ## Installation
 - Clone this repository to a folder on your machine
