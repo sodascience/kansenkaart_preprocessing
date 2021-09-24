@@ -1,4 +1,4 @@
-# Cohorts
+# Cohort description
 So far, we have 34 outcomes derived from five cohorts. Here, we briefly describe the five cohorts and the outcomes. 
 
 ## 1. Main cohort
