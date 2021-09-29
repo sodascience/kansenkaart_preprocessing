@@ -8,11 +8,9 @@ A reproducible preprocessing pipeline for the [KansenKaart]( https://kansenkaart
 ## What is KansenKaart?
 [KansenKaart]( https://kansenkaart.nl/) is a project on intergenerational mobility across areas in the Netherlands. The goal is to show how circumstances in which Dutch individuals grew up are related to later-in-life outcomes. 
 
-We begin by measuring the average later-life outcomes (e.g., income) of children for each neighborhood, by demographic subgroups (gender and migration background), and socioeconomic status (parental income). We focus on municipalities, neighborhoods, and postal codes where children grew up, regardless of where they live later in life. We then map these geographical differences in later-life outcomes across areas within the Netherlands. 
+We begin by measuring the average later-life outcomes (e.g., income) of children for each neighborhood, by demographic subgroups (gender and migration background), and socioeconomic status (parental income). We focus on municipalities, neighborhoods, and postal codes where children grew up, regardless of where they live later in life. We then map these geographical differences in later-life outcomes across areas within the Netherlands. These final results are now available on the interactive website [KansenKaart.nl](https://kansenkaart.nl/), which includes outcomes ranging from health, education, to economic productivity. 
 
-These final results are available on the interactive website [KansenKaart.nl](https://kansenkaart.nl/), which includes outcomes ranging from health, education, to economic productivity. 
-
-So far, we have a total of 34 outcomes derived from five cohorts. These five cohorts are created using this repository. More information on the cohorts can be found [here](https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/COHORTS.md). The final estimates of these 34 outcomes are created using the repository [kansenkaart analysis](https://github.com/sodascience/kansenkaart_analysis).
+So far, we have a total of 34 outcomes derived from five cohorts. These five cohorts are created using this repository. More detailed information on the cohorts can be found [here](https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/COHORTS.md). The final estimates of these 34 outcomes are created using the repository [kansenkaart analysis](https://github.com/sodascience/kansenkaart_analysis).
 
 ## Installation
 - Clone this repository to a folder on your machine
@@ -38,23 +36,25 @@ The cohort dataset for the child mortality cohort is created using the file ‘c
 Several cohorts can be created using this repository, from the raw microdata files at CBS. The configuration files for each of these cohorts can be found in the [`config`](./config) folder. Several selections and/or date values can also be changed there.
 
 ## Preparation pipeline
-The data preparation pipeline has 4 components:
+The data preparation pipeline has four components:
 
-1. Cohort creation. 
+1. Cohort creation
     - Selecting the cohort based on filtering criteria. 
     - Adding parent information to the cohort.
     - Adding postal code and region information to the cohort.
     - Writing `01_cohort.rds` to the scratch folder.
-2. Predictor creation.
+2. Predictor creation
     - Adding parent income and income percentile to the cohort.
     - Adding migration background information to the cohort.
     - Writing `02_predictor.rds` to the scratch folder.
-3. Outcome creation.
+3. Outcome creation
     - Adding outcomes of children to the cohort.
     - Writing `03_outcomes.rds` to the scratch folder.
-4. Post-processing.
+4. Post-processing
     - Selecting variables of interest.
     - Writing `kansenkaart_data.rds` to the scratch folder.
+
+More detailed information on these four components can be found [here]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/ COMPONENTS.md)
 
 ## Package management
 The CBS server has specific versions of packages. A package version dump is available in the `resources` folder. For package management, we use `renv`. This ensures the same versions are installed as in CBS.

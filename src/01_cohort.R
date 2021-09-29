@@ -225,6 +225,7 @@ cohort_dat <- inner_join(cohort_dat, home_tab)
 # free up memory
 rm(adres_tab, home_tab)
 
+
 # clean the postcode table
 vslpc_path <- file.path(loc$data_folder, loc$postcode_data)
 vslpc_tab  <- read_sav(vslpc_path) %>%
