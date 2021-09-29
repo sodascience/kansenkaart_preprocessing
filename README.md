@@ -27,7 +27,7 @@ The cohort data sets are created using the file `create_cohort_data.R`. At the t
 
 After this change, run the entire file to create the cohort data set in the scratch folder!
 
-The cohort data set for the child mortality cohort is created using the file ‘create_cohort_data_mortality.R’, which already contains the desired input configuration `config/child_mortality.yml`. After running the entire file, the created cohort data set can be found in the scratch folder. 
+The cohort data set for the child mortality cohort is created using the file `create_cohort_data_mortality.R`, which already contains the desired input configuration `config/child_mortality.yml`. After running the entire file, the created cohort data set can be found in the scratch folder. 
 
 
 # Details
