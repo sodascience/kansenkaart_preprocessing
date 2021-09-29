@@ -54,7 +54,7 @@ The data preparation pipeline has four components:
     - Selecting variables of interest.
     - Writing `kansenkaart_data.rds` to the scratch folder.
 
-More detailed information on these four components can be found [here]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/ COMPONENTS.md)
+More detailed information on these four components can be found [here]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/COMPONENTS.md)
 
 ## Package management
 The CBS server has specific versions of packages. A package version dump is available in the `resources` folder. For package management, we use `renv`. This ensures the same versions are installed as in CBS.
