@@ -19,7 +19,7 @@ We impose a few income definition restrictions: 1) we convert income with the va
 
 We add a third generation to the variable `GBAGENERATIE` from GBAPERSOONTAB for individuals from the cohort. If the child is native (autochtoon) and at least one of the parents of children is a second-generation immigrant (tweede generatie allochtoon), then we recode the generation of the child to third-generation immigrant (derde generatie allochtoon). In other words, we replace the generation of children from native to third-generation if at least one of the parents is a second-generation immigrant and the child is native.
 
-If the child is a third-generation immigrant, we recode the origin of the child (the variable `GBAHERKOMSTGROEPRING`) as follow:
+If the child is a third-generation immigrant, we recode the origin of the child (the variable `GBAHERKOMSTGROEPRING`) as follows:
 - If the child is third generation & dad origin is native then the child gets mom origin
 - If the child is third generation & mom origin is native then the child gets dad origin
 - If the child is third generation & both mom and dad origin are not native then the child gets mom origin
@@ -43,4 +43,4 @@ In the outcome creation component, we add variables that serve as outcomes for o
 
 
 ## 4. Post-processing
-In the post-processing component, we select variables from the cohort datasets that are relevant for the estimates. 
+In the post-processing component, we select variables from the cohort data sets that are relevant for the estimates.

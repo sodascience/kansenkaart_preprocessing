@@ -3,7 +3,7 @@
 
 ![pipeline.png](pipeline.png)
 
-A reproducible preprocessing pipeline for the [KansenKaart]( https://kansenkaart.nl/) project. The input is raw microdata from CBS (or a synthetic test-version from our repository [cbs_validationdata](https://github.com/sodascience/cbs_validationdata)). The output is several tidy, cleaned-up cohort datasets. The cohort datasets serve as the input to the [kansenkaart analysis](https://github.com/sodascience/kansenkaart_analysis).
+A reproducible preprocessing pipeline for the [KansenKaart]( https://kansenkaart.nl/) project. The input is raw microdata from CBS (or a synthetic test-version from our repository [cbs_validationdata](https://github.com/sodascience/cbs_validationdata)). The output is several tidy, cleaned-up cohort data sets. The cohort data sets serve as the input to the [kansenkaart analysis](https://github.com/sodascience/kansenkaart_analysis).
 
 ## What is KansenKaart?
 [KansenKaart]( https://kansenkaart.nl/) is a project on intergenerational mobility across areas in the Netherlands. The goal is to show how circumstances in which Dutch individuals grew up are related to later-in-life outcomes. 
@@ -19,15 +19,15 @@ So far, we have a total of 34 outcomes derived from five cohorts. These five coh
 - Run `renv::restore()` to install the right versions of all dependencies
 
 ## Cohort creation/ usage
-The cohort datasets are created using the file `create_cohort_data.R`. At the top of this file, change the desired input configuration to one of the following:
+The cohort data sets are created using the file `create_cohort_data.R`. At the top of this file, change the desired input configuration to one of the following:
 - `config/main.yml`
 - `config/perinatal.yml`
 - `config/high_school.yml`
 - `config/elementary_school.yml`
 
-After this change, run the entire file to create the cohort dataset in the scratch folder!
+After this change, run the entire file to create the cohort data set in the scratch folder!
 
-The cohort dataset for the child mortality cohort is created using the file ‘create_cohort_data_mortality.R’, which already contains the desired input configuration `config/child_mortality.yml`. After running the entire file, the created cohort dataset can be found in the scratch folder. 
+The cohort data set for the child mortality cohort is created using the file ‘create_cohort_data_mortality.R’, which already contains the desired input configuration `config/child_mortality.yml`. After running the entire file, the created cohort data set can be found in the scratch folder. 
 
 
 # Details
