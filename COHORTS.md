@@ -7,7 +7,7 @@ The main cohort consists of approximately one million Dutch individuals in their
 1. Child income: the average pretax income between 2017 and 2018 measured in 2018 euros.
 2. HBO education: attained at least an HBO degree (higher professional education) in 2018.
 3. University education: attained at least a university degree in 2018.
-4. Employed: being employed in 2018.
+4. Employed: was employed in 2018.
 5. Disability: received disability benefits in 2018. 
 6. Social benefits: received social benefits in 2018.
 7. Specialist costs: had costs of specialist care within the basic insurance in 2018.
@@ -18,7 +18,7 @@ The main cohort consists of approximately one million Dutch individuals in their
 12. Hourly wage: the average wage one earned per hour in 2017 and 2018 measured in 2018 euros.
 13. Hours worked per week: the average total hours one has worked per week in 2017 and 2018.
 14. Flex contract: had a temporary contract instead of a permanent contract in 2018. 
-15. Working: had a positive hourly wage in 2017 and 2018, that is, one was working in 2017 and 2018 
+15. Working: had a positive hourly wage in 2017 and 2018, that is, one was working in 2017 and 2018.
 
 ## 2. Perinatal cohort
 The perinatal cohort consists of approximately 1.5 million Dutch children who were born between 2008 and 2016. We assign these children to their home address where they live at birth. Parental income is measured between 2014 and 2018. There are two outcomes in the perinatal cohort:
