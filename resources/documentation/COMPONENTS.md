@@ -41,7 +41,7 @@ We use the CBS resource file [`LANDAKTUEELREFV10.sav`]( https://github.com/sodas
 
 
 ## 3. Outcome creation
-In the outcome creation component, we add variables from several microdata sets that serve as outcomes for our estimates. The outcomes we add are different for each cohort. More information on the outcomes we use for each cohort can be found [here](https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/COHORTS.md). 
+In the outcome creation component, we add variables from several microdata sets that serve as outcomes for our estimates. The outcomes we add are different for each cohort. More information on the outcomes we use for each cohort can be found [here](https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/documentation/COHORTS.md). 
 
 ## 1. Main cohort
 We begin by defining child income in the same way as parental income. We average child income over the last two years in our data (`child_income_year_min` - `child_income_year_max`) when children are in their early thirties  (IPI and INPATAB microdata). 
