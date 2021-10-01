@@ -50,7 +50,7 @@ for (year in seq(as.integer(cfg$elementary_school_year_min), as.integer(cfg$elem
       bind_rows(school_dat, .)
 }
 
-# only keep pupils who are in group 8
+# only keep students who are in group 8
 school_dat <- school_dat %>%
   mutate(WPOLEERJAAR = trimws(as.character(WPOLEERJAAR))) %>%
   filter(WPOLEERJAAR == "8")
@@ -154,9 +154,7 @@ cohort_dat <- cohort_dat %>%
     over_advice  = ifelse(advice_type == "over", 1, 0)
   )
 
-# no missings in outcomes
-cohort_dat <- cohort_dat %>% filter(!is.na(advice_type),
-                                    !is.na(wpo_math))
+
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))

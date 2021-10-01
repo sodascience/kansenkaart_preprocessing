@@ -10,7 +10,7 @@ A reproducible preprocessing pipeline for the [KansenKaart]( https://kansenkaart
 
 We begin by measuring the average later-life outcomes (e.g., income) of children for each neighborhood, by demographic subgroups (gender and migration background), and socioeconomic status (parental income). We focus on municipalities, neighborhoods, and postal codes where children grew up, regardless of where they live later in life. We then map these geographical differences in later-life outcomes across areas within the Netherlands. The final results are now available on the interactive website [KansenKaart.nl](https://kansenkaart.nl/), which includes outcomes ranging from health, education, to economic productivity. 
 
-So far, we have a total of 34 outcomes derived from five cohorts. These five cohorts are created using this repository. More detailed information on the cohorts can be found [here](https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/COHORTS.md). The final estimates of these 34 outcomes are created using the repository [kansenkaart analysis](https://github.com/sodascience/kansenkaart_analysis).
+So far, we have a total of 34 outcomes derived from five cohorts. These five cohorts are created using this repository. More detailed information on the cohorts can be found [here](template). The final estimates of these 34 outcomes are created using the repository [kansenkaart analysis](https://github.com/sodascience/kansenkaart_analysis).
 
 ## Installation
 - Clone this repository to a folder on your machine
@@ -54,7 +54,7 @@ The data preparation pipeline has four components:
     - Selecting variables of interest.
     - Writing `kansenkaart_data.rds` to the scratch folder.
 
-More information on these four components can be found [here]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/COMPONENTS.md).
+More information on these four components can be found [here](template).
 
 ## Package management
 The CBS server has specific versions of packages. A package version dump is available in the `resources` folder. For package management, we use `renv`. This ensures the same versions are installed as in CBS.
