@@ -58,7 +58,7 @@ for (year in seq(format(dmy(cfg$child_birth_date_min), "%Y"),
   
 }
 
-# remove gestational age below given days
+# remove gestational age below and above given days
 cohort_dat <- cohort_dat %>%
   unique() %>%
   filter(!(amddd < cfg$cut_off_days_min),

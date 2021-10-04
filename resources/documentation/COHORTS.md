@@ -21,7 +21,7 @@ The main cohort consists of approximately one million Dutch individuals in their
 15. Working: had a positive hourly wage in 2017 and 2018, that is, one was working in 2017 and 2018.
 
 ## 2. Perinatal cohort
-The perinatal cohort consists of approximately 1.5 million Dutch children who were born between 2008 and 2016. We assign these children to their home address where they live at birth. Parental income is measured between 2014 and 2018. There are two outcomes in the perinatal cohort measured from 2008 to 2016:
+The perinatal cohort consists of approximately 1.5 million Dutch children who were born between 2008 and 2016. We assign these children to their home address where they live at their date of birth. Parental income is measured between 2014 and 2018. There are two outcomes in the perinatal cohort measured from 2008 to 2016:
 
 1. Low birth weight/ small-for-gestational age: a birth weight below the 10th percentile adjusted for gestational age and gender, according to the [Hoftiezer curve]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/Hoftiezer_Geboortegewicht%20curves.xlsx). 
 2. Premature birth: a gestational age before 37 completed weeks of gestation. 

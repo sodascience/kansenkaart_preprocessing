@@ -17,7 +17,12 @@ We link a few measures of geographical location to our cohort, including municip
 ## 2. Predictor creation
 In the predictor component, we add variables from several microdata to the cohort that serve as predictors for our estimates. The primary predictor in our estimates is parental income (IPI and INPATAB microdata). Parental income measures the average pretax income of the mother and/or the father combined over a period interval (`parent_income_year_min` - `parent_income_year_max`). 
 
-We impose a few income definition restrictions: 1) we convert income with the value 999999999 (the value 999999999 means that the person belongs to a household with no perceived income) or with negative income (income below 0) to NA (not available), 2) we censor income above the limit of euros (`income_censoring_value`), and 3) we adjust parental income for inflation using the [consumer price index (CPI)]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv) from CBS Statline (`cpi_base_year`). We remove individuals with parents without an observable income within the period interval.
+We impose a few income definition restrictions: 
+1. We convert income with the value 999999999 (the value 999999999 means that the person belongs to a household with no perceived income) or with negative income (income below 0) to NA (not available).
+2. We censor income above the limit of euros (`income_censoring_value`).
+3. We adjust parental income for inflation using the [consumer price index (CPI)]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv) from CBS Statline (`cpi_base_year`).
+
+Individuals with parents without an observable income within the period interval are removed from the cohort.
 
 We add a third generation to the variable `GBAGENERATIE` from GBAPERSOONTAB microdata for individuals from the cohort. If the child is native (autochtoon) and at least one of the parents of children is a second-generation immigrant (tweede generatie allochtoon), then we recode the generation of the child to third-generation immigrant (derde generatie allochtoon). In other words, we replace the generation of children from native to third-generation if at least one of the parents is a second-generation immigrant and the child is native.
 
@@ -46,7 +51,12 @@ In the outcome creation component, we add variables from several microdata sets 
 ## 1. Main cohort
 We begin by defining child income in the same way as parental income. We average child income over the last two years in our data (`child_income_year_min` - `child_income_year_max`) when children are in their early thirties  (IPI and INPATAB microdata). 
 
-Similar to parental income, we impose a few income definition restrictions: 1) we convert income with the value 999999999 (the value 999999999 means that the person belongs to a household with no perceived income) or with negative income (income below 0) to NA (not available), 2) we censor income above the limit of euros (`income_censoring_value`), and 3) we adjust parental income for inflation using the [consumer price index (CPI)]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv) from CBS Statline (`cpi_base_year`). We remove children with no observable child income from our cohort. 
+Similar to parental income, we impose a few income definition restrictions: 
+1. We convert income with the value 999999999 (the value 999999999 means that the person belongs to a household with no perceived income) or with negative income (income below 0) to NA (not available).
+2. We censor income above the limit of euros (`income_censoring_value`).
+3. We adjust parental income for inflation using the [consumer price index (CPI)]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv) from CBS Statline (`cpi_base_year`). 
+
+Children with no observable child income are removed from our cohort. 
 
 We use HOOGSTEOPLTAB microdata to define our higher education outcomes. We define HBO education as an indicator for attaining at least an HBO degree (higher professional education). We define university education as an indicator for attaining at least a university degree (scientific education). 
 
@@ -62,8 +72,12 @@ We use ZVWZORGKOSTENTAB microdata to define our health costs outcomes. We define
 ## 2. Perinatal cohort
 We use PRNL microdata to define our perinatal outcomes. We restrict the cohort to gestational age between our chosen day interval (`cut_off_days_min` - ` cut_off_days_max`). We also remove deaths occurring up to a few days after birth (`cut_off_mortality_day`). To determine the date of death of the child, we use DO, DOODOORZTAB, and GBAOVERLIJDENSTAB microdata. The perinatal cohort consists of two outcomes. We define low birth weight as an indicator for having a birth weight below the 10th percentile of the birth weight percentile conditionally on gestational age and sex according to the [Hoftiezer curve]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/Hoftiezer_Geboortegewicht%20curves.xlsx). We define premature birth as a gestational age before 37 completed weeks of gestation.
 
-Another predictor for the perinatal cohort is the household income of the mother (IHI and INHATAB microdata). Household income measures the average household income of the mother over a period interval (`parent_income_year_min` - ` parent_income_year_max`). To link household income to our cohort, we use data from INPATAB which serves as a ‘bridge’ between INHATAB and our cohort. Similar to parental income, we impose a few income definition restrictions: 1) we convert household income with the value 999999999 (the value 999999999 means that the person belongs to a household with no perceived income) or with negative income (income below 0) to NA (not available), 2) we censor income above the limit of euros (`income_censoring_value`), and 3) we adjust household income for inflation using the [consumer price index (CPI)]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv) from CBS Statline (`cpi_base_year`). We remove children with no observable mother’s household income from our cohort. 
+Another predictor for the perinatal cohort is the household income of the mother (IHI and INHATAB microdata). Household income measures the average household income of the mother over a period interval (`parent_income_year_min` - ` parent_income_year_max`). To link household income to our cohort, we use data from INPATAB which serves as a ‘bridge’ between INHATAB and our cohort. Similar to parental income, we impose a few income definition restrictions: 
+1. We convert household income with the value 999999999 (the value 999999999 means that the person belongs to a household with no perceived income) or with negative income (income below 0) to NA (not available).
+2. We censor income above the limit of euros (`income_censoring_value`). 
+3. We adjust household income for inflation using the [consumer price index (CPI)]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv) from CBS Statline (`cpi_base_year`). 
 
+Children with no observable mother’s household income are removed from our cohort.
 
 ## 3. High school cohort
 We use HOOGSTEOPLTAB microdata to define our high school outcomes. We measure the high school education level of individuals at the age of 16. We define VMBO-high plus as an indicator for following at least a VMBO-high high school education. We define HAVO plus as an indicator for following at least an HAVO high school education. We define VWO plus as an indicator for following at least a VWO high school education.
