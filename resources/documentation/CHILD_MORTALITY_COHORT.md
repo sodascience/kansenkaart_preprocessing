@@ -13,15 +13,12 @@ We link a few measures of geographical location to our cohort, including municip
 
 
 ## 2. Predictor creation
-In the predictor component, we add variables from several microdata to the cohort that serve as predictors for our estimates. The primary predictor in our estimates is mother’s household income (IHI and INHATAB microdata).  Household income measures the average household income of the mother over a period interval (`parent_income_year_min` - `parent_income_year_max`). To link household income to our cohort, we use data from INPATAB which serves as a ‘bridge’ between INHATAB and our cohort.
-
+In the predictor component, we add variables from several microdata to the cohort that serve as predictors for our estimates. The primary predictor in our estimates is mother’s household income (IHI and INHATAB microdata).  Household income measures the average household income of the mother over a period interval (`parent_income_year_min` - `parent_income_year_max`). To link household income to our cohort, we use data from INPATAB which serves as a ‘bridge’ between INHATAB and our cohort. Children with no observable mother’s household income are removed from our cohort.
 
 We impose a few income definition restrictions: 
 1. We convert household income with the value 999999999 (the value 999999999 means that the person belongs to a household with no perceived income) or with negative income (income below 0) to NA (not available).
 2. We censor income above the limit of euros (`income_censoring_value`).
 3. We adjust household income for inflation using the [consumer price index (CPI)]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv) from CBS Statline (`cpi_base_year`). 
-
-Children with no observable mother’s household income are removed from our cohort.
 
 We add a third generation to the variable `GBAGENERATIE` from GBAPERSOONTAB microdata for individuals from the cohort. If the child is native (autochtoon) and at least one of the parents of children is a second-generation immigrant (tweede generatie allochtoon), then we recode the generation of the child to third-generation immigrant (derde generatie allochtoon). In other words, we replace the generation of children from native to third-generation if at least one of the parents is a second-generation immigrant and the child is native.
 

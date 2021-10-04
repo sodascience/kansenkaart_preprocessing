@@ -55,4 +55,9 @@ The child mortality cohort consists of approximately 1.5 million Dutch children 
 2. Neonatal mortality: death that occurs between 24 completed weeks of gestation and up to 28 days after birth.
 3. Infant mortality: death that occurs between 24 completed weeks of gestation and up to 365 days after birth.
 
-Note that the child mortality cohort uses different components than the other cohorts since the base data set of the child mortality cohort consists of individuals from the PRNL microdata instead of the GBAPERSOONTAB microdata.
+Note that the child mortality cohort uses different components than the other cohorts since the base data set of the child mortality cohort consists of individuals from the PRNL microdata instead of the GBAPERSOONTAB microdata. 
+
+Information on the cohort components can be found [here]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/documentation/COMPONENTS.md). Information on the child mortality components can be found [here]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/documentation/CHILD_MORTALITY_COHORT.md).
+
+
+
