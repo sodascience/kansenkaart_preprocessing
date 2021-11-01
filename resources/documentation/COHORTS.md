@@ -14,7 +14,7 @@ The main cohort consists of approximately one million Dutch individuals in their
 8. Basis GGZ costs: had costs of generalist basic mental healthcare within the basic insurance in 2018. 
 9. Pharmaceutical costs: had costs of pharmacy within the basic insurance in 2018.
 10. Hospital costs: had costs of hospital care within the basic insurance in 2017.
-11. Total health costs: the sum of total health costs in 2018 measured in 2018 euros.
+11. Total health costs: the sum of health costs in 2018 measured in 2018 euros.
 12. Hourly wage: the average wage one earned per hour in 2017 and 2018 measured in 2018 euros.
 13. Hours worked per week: the average total hours one has worked per week in 2017 and 2018.
 14. Flex contract: had a temporary contract instead of a permanent contract in 2018. 
