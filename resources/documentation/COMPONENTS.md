@@ -62,7 +62,7 @@ We create two additional indicators: we define working as an indicator for havin
 
 We use SECMBUS microdata to define our socioeconomic outcomes. We measure the socioeconomic status of individuals at our target date (`secm_ref_date`). We define employed as an indicator for being employed. We define disability as an indicator for receiving disability benefits. We define social benefits as an indicator for receiving social benefits.
 
-We use ZVWZORGKOSTENTAB microdata to define our health costs outcomes. We define specialist costs as an indicator for having costs of specialist care within the basic health insurance. We define basis GGZ costs as an indicator for having costs of generalist basic mental healthcare within the basic health insurance. We define pharmaceutical costs as an indicator for having costs of pharmacy within the basic health insurance. We define hospital costs as an indicator for having costs of hospital care within the basic health insurance. We define total health costs as the sum of all health costs. 
+We use ZVWZORGKOSTENTAB microdata to define our health costs outcomes. We define specialist costs as an indicator for having costs of specialist care within the basic health insurance. We define basis GGZ costs as an indicator for having costs of generalist basic mental healthcare within the basic health insurance. We define pharmaceutical costs as an indicator for having costs of pharmacy within the basic health insurance. We define hospital costs as an indicator for having costs of hospital care within the basic health insurance. We define total health costs as the sum of health costs. 
 
 
 ### 2. Perinatal cohort
