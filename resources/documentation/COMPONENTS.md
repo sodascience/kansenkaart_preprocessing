@@ -5,7 +5,7 @@ To create the cohorts, we use the KansenKaart preprocessing pipeline that has fo
 ## 1. Cohort creation
 In the cohort creation component, we start with defining each cohort which consists of Dutch individuals who were born within our target birth date interval (`child_birth_date_min` - `child_birth_date_max`). We use the GBAPERSOONTAB microdata file which is a municipal population register that has information on all individuals who were registered at a Dutch municipality. 
 
-We exclude individuals who emigrated or died within a period (`child_live_start` - `child_live_end`) – that is, we only include individuals who live continuously in the Netherlands in the period we measure the outcomes (`live_continuously`). 
+We exclude individuals who emigrated or died within a period (`child_live_start` - `child_live_end`) – that is, we only include individuals who live continuously in the Netherlands in the period we measure the outcomes (`live_continuously`). We allow children to not live in the Netherlands up to a certain number of days (`child_live_slack_days`).
 
 We match individuals to their parents using the KINDOUDERTAB microdata. This microdata file provides information on the legal parents of the individuals. Individuals without at least one legal parent are removed from our cohort. We further restrict our cohort to individuals with parents that were between the age interval at childbirth (`parent_min_age_at_birth` - `parent_max_age_at_birth`). 
 
