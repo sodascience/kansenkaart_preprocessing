@@ -7,13 +7,17 @@
 #
 # (c) ODISSEI Social Data Science team 2021
 
+
+
 #### PACKAGES ####
 library(tidyverse)
+library(lubridate)
 library(haven)
 
 #### CONFIGURATION ####
 # load main cohort dataset
 cohort_dat <- read_rds(file.path(loc$scratch_folder, "01_cohort.rds"))
+
 
 #### PARENT INCOME ####
 # create a table with incomes at the cpi_base_year level
@@ -41,7 +45,7 @@ get_ipi_filename <- function(year) {
   # function to get latest ipi version of specified year
   # get all ipi files with the specified year
   fl <- list.files(
-    path = file.path(loc$data_folder, "/InkomenBestedingen/INTEGRAAL PERSOONLIJK INKOMEN/", year),
+    path = file.path(loc$data_folder, "InkomenBestedingen/INTEGRAAL PERSOONLIJK INKOMEN", year),
     pattern = paste0("PERSOONINK", year), 
     full.names = TRUE
   )
@@ -53,7 +57,7 @@ get_inpa_filename <- function(year) {
   # function to get latest inpa version of specified year
   # get all inpa files with the specified year
   fl <- list.files(
-    path = file.path(loc$data_folder, "/InkomenBestedingen/INPATAB/"),
+    path = file.path(loc$data_folder, "InkomenBestedingen/INPATAB"),
     pattern = paste0("INPA", year), 
     full.names = TRUE
   )
@@ -78,7 +82,7 @@ for (year in seq(as.integer(cfg$parent_income_year_min),
       mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value"),
              RINPERSOONSHKW = as_factor(RINPERSOONSHKW, levels = "value"),
              year = year
-             ) %>%
+      ) %>%
       # select only incomes of mothers
       filter(RINPERSOON %in% mothers) %>% 
       # add to mothers rinpersoon
@@ -92,7 +96,7 @@ for (year in seq(as.integer(cfg$parent_income_year_min),
       mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value"),
              RINPERSOONSHKW = as_factor(RINPERSOONSHKW, levels = "value"),
              year = year
-             ) %>%
+      ) %>%
       # select only mothers
       filter(RINPERSOON %in% mothers) %>% 
       # add to mothers
@@ -107,7 +111,7 @@ get_ihi_filename <- function(year) {
   # function to get latest ihi version of specified year
   # get all ihi files with the specified year
   fl <- list.files(
-    path = file.path(loc$data_folder, "InkomenBestedingen/INTEGRAAL HUISHOUDENS INKOMEN/", year),
+    path = file.path(loc$data_folder, "InkomenBestedingen/INTEGRAAL HUISHOUDENS INKOMEN", year),
     pattern = paste0(year, "TABV[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -119,7 +123,7 @@ get_inha_filename <- function(year) {
   # function to get latest inha version of specified year
   # get all inha files with the specified year
   fl <- list.files(
-    path = file.path(loc$data_folder, "InkomenBestedingen/INHATAB/"),
+    path = file.path(loc$data_folder, "InkomenBestedingen/INHATAB"),
     pattern = paste0(year, "TABV[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -129,6 +133,7 @@ get_inha_filename <- function(year) {
 
 income_household <- tibble(RINPERSOONSHKW = factor(), RINPERSOONHKW = character(), 
                            household_income = double(), year = integer())
+
 for (year in seq(as.integer(cfg$parent_income_year_min), 
                  as.integer(cfg$parent_income_year_max))) {
   
@@ -164,14 +169,13 @@ for (year in seq(as.integer(cfg$parent_income_year_min),
 if (as.integer(cfg$parent_income_year_max) < 2011) {
   income_household <-
     income_household %>% 
-    mutate(household_income = ifelse(household_income == 999999999 | 
-                                       household_income < 0, NA, household_income)) 
+    mutate(household_income = ifelse(household_income == 999999999, NA, household_income)) 
   
 } else {
   income_household <-
     income_household %>% 
-    mutate(household_income = ifelse(household_income == 9999999999 | 
-                                       household_income < 0, NA, household_income)) 
+    mutate(household_income = ifelse(household_income == 9999999999,
+                                     NA, household_income)) 
 } 
 
 # censor income above a certain value
@@ -213,6 +217,17 @@ cohort_dat <- cohort_dat %>%
 
 rm(income_household)
 
+# if household_income is negative then household_income is NA
+cohort_dat <- 
+  cohort_dat %>%
+  mutate(household_income = ifelse(household_income < 0, NA, household_income))
+
+
+# remove income if household_income is NA 
+cohort_dat <- 
+  cohort_dat %>%
+  filter(!is.na(household_income))
+
 
 # compute income transformations
 cohort_dat <- 
@@ -223,7 +238,16 @@ cohort_dat <-
     income_household_rank = rank(household_income, ties.method = "average"),
     income_household_perc = income_household_rank / max(income_household_rank),
     household_rank_100 = ntile(household_income, 100)
-  )
+  ) 
+
+cohort_dat <- 
+  cohort_dat %>% 
+  rename(parents_income_n    = household_income_n,
+         income_parents      = household_income,
+         income_parents_rank = income_household_rank,
+         income_parents_perc = income_household_perc,
+         parents_rank_100    = household_rank_100)
+
 
 
 #### THIRD GENERATION ####
@@ -235,8 +259,8 @@ gba_dat <-
                                     "GBAGEBOORTELAND", "GBAGENERATIE", 
                                     "GBAHERKOMSTGROEPERING")) %>% 
   mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
-         # GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
-         # GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
+         GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
+         GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
          GBAGENERATIE = as_factor(GBAGENERATIE, levels = "labels"))
 
 
@@ -295,12 +319,11 @@ cohort_dat <-
 
 #### MIGRATION BACKGROUND ####
 western_tab <- read_sav(loc$migration_data, 
-                        col_select = c("LAND", "LANDTYPE")) 
-# %>%
-#   mutate(
-#     LAND = as_factor(LAND, levels = "labels"),
-#     LANDTYPE = as_factor(LANDTYPE, levels = "labels")
-#   )
+                        col_select = c("LAND", "LANDTYPE")) %>%
+  mutate(
+    LAND = as_factor(LAND, levels = "labels"),
+    LANDTYPE = as_factor(LANDTYPE, levels = "labels")
+  )
 
 # create migration variable with origin without third generation
 cohort_dat <- cohort_dat %>%
@@ -319,6 +342,154 @@ cohort_dat <- cohort_dat %>%
 
 # free up memory
 rm(gba_dat, western_tab)
+
+
+#### SINGLE PARENTS HOUSEHOLDS ####
+
+# import household  data
+household_dat <-
+  read_sav(file.path(loc$data_folder, loc$household_data),
+           col_select = c("RINPERSOONS", "RINPERSOON", "DATUMAANVANGHH",
+                          "DATUMEINDEHH", "TYPHH")) %>%
+  filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>%
+  mutate(
+    RINPERSOONS = as_factor(RINPERSOONS, levels = "value"),
+    DATUMAANVANGHH = as.numeric(DATUMAANVANGHH),
+    DATUMEINDEHH = as.numeric(DATUMEINDEHH),
+    TYPHH = as_factor(TYPHH, levels = "value")
+  ) %>%
+  mutate_all(na_if, "") %>%
+  mutate(
+    DATUMAANVANGHH = ymd(DATUMAANVANGHH),
+    DATUMEINDEHH = ymd(DATUMEINDEHH)
+  ) 
+
+  
+# onyl keep children within an time interval
+  hh_tab <- 
+    household_dat %>% 
+    left_join(cohort_dat %>% select(RINPERSOONS, RINPERSOON, datumkind), 
+              by = c("RINPERSOONS", "RINPERSOON")) %>%
+    filter(datumkind %within% interval(DATUMAANVANGHH, DATUMEINDEHH)) %>%
+    group_by(RINPERSOONS, RINPERSOON) %>% 
+    summarize(type_hh = TYPHH)  
+  
+
+# create single parents dummy
+  hh_tab <- 
+    hh_tab %>%
+    mutate(single_parents = ifelse(type_hh == "6", 1, 0), 
+           two_parents = ifelse(type_hh %in% c("2", "3", "4", "5"), 1, 0))
+
+cohort_dat <- 
+  cohort_dat %>%
+  left_join(hh_tab, by = c("RINPERSOONS", "RINPERSOON"))
+
+# convert NA to 0
+cohort_dat <- 
+  cohort_dat %>%
+  mutate(single_parents = ifelse(is.na(single_parents), 0, single_parents), 
+         two_parents = ifelse(is.na(two_parents), 0, two_parents))
+
+rm(household_dat, hh_tab)
+
+
+
+#### EDUCATION PARENTS ####
+
+if (cfg$education_parents) {
+  
+  get_hoogstopl_filename <- function(year) {
+    # get all HOOGSTEOPLTAB files with the specified year
+    fl <- list.files(
+      path = file.path(loc$data_folder, "Onderwijs/HOOGSTEOPLTAB", year),
+      pattern = "(?i)(.sav)", 
+      full.names = TRUE
+    )
+    # return only the latest version
+    sort(fl, decreasing = TRUE)[1]
+  }
+  
+  
+  # load data for linking education numbers to education levels
+  edu_link <- read_sav(loc$opleiding_data) %>%
+    select(OPLNR, CTO2021V) %>%
+    left_join(read_sav(loc$cto_data) %>%
+                select(CTO, OPLNIVSOI2016AGG4HB), by = c("CTO2021V" = "CTO")) 
+  
+  parents_education <- tibble(RINPERSOONS = factor(), RINPERSOON = character(),
+                              education = integer(), year = integer())
+  for (year in seq((as.integer(format(dmy(cfg$child_birth_date_min), "%Y")) + cfg$childhood_home_age),
+                   (as.integer(format(dmy(cfg$child_birth_date_max), "%Y")) + cfg$childhood_home_age))) {
+    
+    if (year < 2013) {
+      parents_education <- read_sav(get_hoogstopl_filename(year), 
+                                    col_select = c("RINPERSOONS", "RINPERSOON", 
+                                                   "OPLNRHB")) %>%
+        rename(education_number = OPLNRHB) %>%
+        mutate(
+          RINPERSOONS = as_factor(RINPERSOONS, levels = "value"),
+          education_number = ifelse(education_number == "----", NA, education_number),
+          year = year
+        ) %>%
+        # add education numbers to education data
+        left_join(edu_link, by = c("education_number" = "OPLNR")) %>%
+        select(RINPERSOONS, RINPERSOON, OPLNIVSOI2016AGG4HB, year) %>%
+        rename(education = OPLNIVSOI2016AGG4HB) %>%
+        mutate(education = ifelse(education == "----", NA, education), 
+               education = as.numeric(education)) %>%
+        # add to data 
+        bind_rows(parents_education, .)
+      
+    }  else if (year >= 2013) {
+      parents_education <- read_sav(get_hoogstopl_filename(year), 
+                                    col_select = c("RINPERSOONS", "RINPERSOON", 
+                                                   "OPLNIVSOI2016AGG4HBMETNIRWO")) %>%
+        rename(education = OPLNIVSOI2016AGG4HBMETNIRWO) %>%
+        mutate(
+          RINPERSOONS = as_factor(RINPERSOONS, levels = "value"),
+          education = ifelse(education == "----", NA, education),
+          education = as.numeric(education),
+          year = year
+        ) %>%
+        # add to data 
+        bind_rows(parents_education, .)
+    }
+  }
+  
+  # create parents education variable
+  parents_education <- 
+    parents_education %>%
+    mutate(
+      parents_edu = ifelse(education %in% c(3110, 3111, 3112, 3210, 3211), "hbo", "other"), 
+      parents_edu = ifelse(education %in% c(3113, 3212, 3213), "wo", parents_edu)
+    ) %>%
+    select(-education)
+  
+  
+  # determine parents education of child at a specific age
+  cohort_dat <- 
+    cohort_dat %>%
+    mutate(year = as.numeric(format(datumkind, "%Y")) + cfg$childhood_home_age)
+  
+  
+  # add parents education to cohort
+  cohort_dat <- 
+    cohort_dat %>% 
+    left_join(parents_education,
+              by = c("rinpersoons_moeder" = "RINPERSOONS", "rinpersoon_moeder" = "RINPERSOON", "year")) %>%
+    rename(parents_education = parents_edu) %>%
+    select(-year)
+  
+  # convert NA to other category
+  cohort_dat <-
+    cohort_dat %>%
+    mutate(
+      parents_education = ifelse(is.na(parents_education), "other", parents_education)
+    )
+  
+  rm(parents_education, edu_link)
+}
 
 
 #### WRITE OUTPUT TO SCRATCH ####

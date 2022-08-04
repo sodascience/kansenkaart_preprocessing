@@ -8,11 +8,13 @@
 #
 # (c) ODISSEI Social Data Science team 2021
 
+
 #### PACKAGES ####
 library(tidyverse)
 library(lubridate)
 library(haven)
 library(readxl)
+library(dplyr)
 
 #### SELECT COHORT FROM GBA ####
 gba_path <- file.path(loc$data_folder, loc$gba_data)
@@ -82,7 +84,8 @@ if (cfg$live_continuously) {
   
   # free up memory
   rm(adres_tab, days_tab)
-}
+  
+} 
 
 
 #### PARENT LINK ####
@@ -109,8 +112,8 @@ cohort_dat <-
 cohort_dat <- 
   cohort_dat %>% 
   mutate(
-    age_at_birth_ma = abs(interval(birthdate_ma, birthdate) / years(1)),
-    age_at_birth_pa = abs(interval(birthdate_pa, birthdate) / years(1))
+    age_at_birth_ma = interval(birthdate_ma, birthdate) / years(1),
+    age_at_birth_pa = interval(birthdate_pa, birthdate) / years(1)
   ) %>% 
   filter(
     (is.na(age_at_birth_ma) | (age_at_birth_ma >= cfg$parent_min_age & age_at_birth_ma <= cfg$parent_max_age)),
@@ -159,13 +162,40 @@ if (cfg$childhood_home_first) {
       childhood_home = RINOBJECTNUMMER[1], 
       type_childhood_home = SOORTOBJECTNUMMER[1])
   
+  
+} else if (cfg$childhood_home_age_date) {
+  
+  # take date at which the child is a specific age
+  age_tab <- cohort_dat %>%
+    select(RINPERSOONS, RINPERSOON, birthdate) %>%
+    mutate(home_address_date = birthdate %m+% years(cfg$childhood_home_age)) %>%
+    select(-birthdate)
+  
+  # take the address registration on a specific age
+  home_tab <-
+    adres_tab %>%
+    filter(RINPERSOON %in% cohort_dat$RINPERSOON & RINPERSOONS %in% cohort_dat$RINPERSOONS) %>%
+    # add home_address_age to dat
+    left_join(age_tab, by = c("RINPERSOONS", "RINPERSOON")) %>%
+    # take addresses that are still open on a specific date
+    filter(
+      GBADATUMAANVANGADRESHOUDING <= home_address_date &
+        GBADATUMEINDEADRESHOUDING >= home_address_date
+    ) %>%
+    group_by(RINPERSOONS, RINPERSOON) %>%
+    summarise(
+      childhood_home = RINOBJECTNUMMER[1],
+      type_childhood_home = SOORTOBJECTNUMMER[1])
+  
+  rm(age_tab)
+  
 # take the address registration to be their childhood home at date of birth
 } else if (cfg$childhood_home_birthyear) {
   
   # function to get latest perined version of specified year
   get_prnl_filename <- function(year) {
     fl <- list.files(
-      path = file.path(loc$data_folder, "GezondheidWelzijn/PRNL/", year, "/"), 
+      path = file.path(loc$data_folder, "GezondheidWelzijn/PRNL", year), 
       pattern = paste0(year, "V[0-9]+(?i)(.sav)"),
       full.names = TRUE
     )
@@ -191,7 +221,7 @@ if (cfg$childhood_home_first) {
   }
   
   # post-processing
-  perined_dat <- perined_dat %>% mutate(datumkind = dmy(datumkind))
+  perined_dat <- perined_dat %>% mutate(datumkind = ymd(datumkind))
   
   home_tab <- 
     adres_tab %>% 
@@ -224,7 +254,6 @@ cohort_dat <- inner_join(cohort_dat, home_tab)
 
 # free up memory
 rm(adres_tab, home_tab)
-
 
 # clean the postcode table
 vslpc_path <- file.path(loc$data_folder, loc$postcode_data)

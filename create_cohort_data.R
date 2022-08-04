@@ -2,11 +2,13 @@
 #
 # Full cohort creation script
 #
-# (c) ODISSEI Social Data Science team 2021
+# (c) ODISSEI Social Data Science team 2022
+
+
 
 # input the desired config file here:
+cfg_file <- "config/high_school.yml"
 
-cfg_file <- "config/perinatal.yml"
 
 #### CONFIGURATION ####
 # load the configuration

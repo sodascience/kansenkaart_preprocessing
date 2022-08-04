@@ -8,8 +8,8 @@ default:
     child_birth_date_max: "31/12/2002"
     
     # The cohort should live continuously in NL in the following period
-    live_continuously: true
-    child_live_start: "01/01/2016"
+    live_continuously: false
+    child_live_start: "01/01/2014"
     child_live_end: "31/12/2018"
     
     # The cohort is allowed to be unregistered for this many days 
@@ -24,8 +24,12 @@ default:
     childhood_home_first: false
     
     # Should we use the first address registration of a child on a specific date
-    childhood_home_date: true
+    childhood_home_date: false
     childhood_home_year: "2015-12-31"
+    
+    # Should we use the address registration of a child on a specific age
+    childhood_home_age_date: true
+    childhood_home_age: 15
     
     # take the address registration to be their childhood home at date of birth
     childhood_home_birthyear: false
@@ -33,10 +37,12 @@ default:
     # If we do not, then use the longest address registration before cutoff_year:
     childhood_home_cutoff_year: 18
     
-    # Postal code link to homes will be considered on this target date
+   # Postal code link to homes will be considered on this target date
     postcode_target_date: "31/12/2019"
     # Neighbourhood geo link to homes will be considered on this target date
     gwb_target_date: "31/12/2019"
+    # Corop geo link to homes will be considered on this target date
+    corop_target_date: "31/12/2019"
     
     # Income will be deflated to cpi_base_year euros.
     cpi_base_year: 2018
@@ -44,6 +50,10 @@ default:
     # Parent income year range
     parent_income_year_min: 2014
     parent_income_year_max: 2018
+    
+    # Parent wealth year range
+    parent_wealth_year_min: 2014
+    parent_wealth_year_max: 2018
 
     # censor income above this value
     income_censoring_value: 1200000
@@ -51,6 +61,9 @@ default:
     # high school data year range
     high_school_year_min: 2014
     high_school_year_max: 2018
+    
+    # The parents education will be added to to the cohort
+    education_parents: false
 
     
   file_locations:
@@ -61,12 +74,17 @@ default:
     
     # path to the cbs microdata
     gba_data: "Bevolking/GBAPERSOONTAB/2018/GBAPERSOON2018TABV2.sav"
-    gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2019BUSV1.sav"
+    gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2021BUSV1.sav"
     kind_data: "Bevolking/KINDOUDERTAB/2018/KINDOUDER2018TABV1.sav"
-    postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2021031.sav"
-    vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2021TAB03V1.sav"
-    
+    postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2022031.sav"
+    vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2022TAB03V2.sav"
+    woon_data: "BouwenWonen/LEVCYCLWOONNIETWOONBUS/2018/LEVCYCLWOONNIETWOONBUSV2018121.sav"
+    household_data: "Bevolking/GBAHUISHOUDENSBUS/GBAHUISHOUDENS2020BUSV1.sav"
+
+
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
     migration_data: "resources/LANDAKTUEELREF10.sav"
     corop_data: "resources/gemeenten_corop_1981.xlsx"
+ 
+  

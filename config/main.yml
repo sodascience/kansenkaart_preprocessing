@@ -9,7 +9,7 @@ default:
     
     # The cohort should live continuously in NL in the following period
     live_continuously: true
-    child_live_start: "01/01/2014"
+    child_live_start: "01/01/2017"
     child_live_end: "31/12/2018"
     
     # The cohort is allowed to be unregistered for this many days 
@@ -21,11 +21,15 @@ default:
     parent_max_age_at_birth: 50
     
     # Should we use the first address registration of a child as their childhood home?
-    childhood_home_first: true
+    childhood_home_first: false
     
     # Should we use the first address registration of a child on a specific date
-    childhood_home_date: false
-    childhood_home_year: "2015-12-31"
+    childhood_home_date: true
+    childhood_home_year: "1994-12-31"
+    
+    # Should we use the address registration of a child on a specific age
+    childhood_home_age_date: false
+    childhood_home_age: 10
     
     # take the address registration to be their childhood home at date of birth
     childhood_home_birthyear: false
@@ -37,6 +41,8 @@ default:
     postcode_target_date: "31/12/2019"
     # Neighbourhood geo link to homes will be considered on this target date
     gwb_target_date: "31/12/2019"
+    # Corop geo link to homes will be considered on this target date
+    corop_target_date: "31/12/2019"
     
     # Income will be deflated to cpi_base_year euros.
     cpi_base_year: 2018
@@ -45,7 +51,11 @@ default:
     parent_income_year_min: 2003
     parent_income_year_max: 2007
     
-    #  Child income year range
+    # Parent wealth year range
+    parent_wealth_year_min: 2003
+    parent_wealth_year_max: 2007
+    
+    # Child income year range
     child_income_year_min: 2017
     child_income_year_max: 2018
     
@@ -55,25 +65,36 @@ default:
     # censor income above this value
     income_censoring_value: 1200000
     
+    # date to measure whether a house is bought or rented
+    property_date: "2018/01/01"
+    
+    # The parents education will be added to to the cohort
+    education_parents: false
+    
+    
   file_locations:
     # The data folder is the root folder of the cbs microdata tables
     data_folder: "cbsdata"
-
     # The scratch folder is used to write intermediate output
     scratch_folder: "scratch/main"
     
     # path to the cbs microdata
     gba_data: "Bevolking/GBAPERSOONTAB/2018/GBAPERSOON2018TABV2.sav"
-    gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2019BUSV1.sav"
+    gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2021BUSV1.sav"
     kind_data: "Bevolking/KINDOUDERTAB/2018/KINDOUDER2018TABV1.sav"
-    postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2021031.sav"
-    vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2021TAB03V1.sav"
+    postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2022031.sav"
+    vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2022TAB03V2.sav"
     hoogste_opl_data: "Onderwijs/HOOGSTEOPLTAB/2018/HOOGSTEOPL2018TABV3.sav"
     spolis_data: "Spolis/SPOLISBUS"
-    secm_data: "InkomenBestedingen/SECMBUS/SECMBUSV20191.sav"
+    secm_data: "InkomenBestedingen/SECMBUS/SECMBUS2020V1.SAV"
     zvwzorgkosten_data: "GezondheidWelzijn/ZVWZORGKOSTENTAB/2018/ZVWZORGKOSTEN2018TABV2.sav"
+    link_data: "InkomenBestedingen/KOPPELPERSOONHUISHOUDEN/KOPPELPERSOONHUISHOUDEN2018.sav"
+    wealth_data: "InkomenBestedingen/VEHTAB/VEH2018TABV3.sav"
+    property_data: "BouwenWonen/EIGENDOMTAB/EIGENDOM2018TABV3.sav"
+    household_data: "Bevolking/GBAHUISHOUDENSBUS/GBAHUISHOUDENS2020BUSV1.sav"
 
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
     migration_data: "resources/LANDAKTUEELREF10.sav"
     corop_data: "resources/gemeenten_corop_1981.xlsx"
+    

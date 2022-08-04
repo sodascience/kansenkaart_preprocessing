@@ -27,16 +27,22 @@ default:
     childhood_home_date: false
     childhood_home_year: "2015-12-31"
     
+    # Should we use the address registration of a child on a specific age
+    childhood_home_age_date: false
+    childhood_home_age: 0
+    
     # take the address registration to be their childhood home at date of birth
     childhood_home_birthyear: true
     
     # If we do not, then use the longest address registration before cutoff_year:
     childhood_home_cutoff_year: 18
     
-    # Postal code link to homes will be considered on this target date
+   # Postal code link to homes will be considered on this target date
     postcode_target_date: "31/12/2019"
     # Neighbourhood geo link to homes will be considered on this target date
     gwb_target_date: "31/12/2019"
+    # Corop geo link to homes will be considered on this target date
+    corop_target_date: "31/12/2019"
     
     # Income will be deflated to cpi_base_year euros.
     cpi_base_year: 2018
@@ -44,6 +50,10 @@ default:
     # Parent income year range
     parent_income_year_min: 2014
     parent_income_year_max: 2018
+    
+    # Parent wealth year range
+    parent_wealth_year_min: 2014
+    parent_wealth_year_max: 2018
     
     # censor income above this value
     income_censoring_value: 1200000
@@ -54,6 +64,9 @@ default:
     
     # remove birth below given day
     cut_off_mortality_day: 7
+    
+    # The parents education will be added to to the cohort
+    education_parents: true
     
     
   file_locations:
@@ -66,9 +79,10 @@ default:
     gba_data: "Bevolking/GBAPERSOONTAB/2018/GBAPERSOON2018TABV2.sav"
     gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2019BUSV1.sav"
     kind_data: "Bevolking/KINDOUDERTAB/2018/KINDOUDER2018TABV1.sav"
-    postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2021031.sav"
-    vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2021TAB03V1.sav"
-    
+    postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2022031.sav"
+    vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2022TAB03V2.sav"
+    household_data: "Bevolking/GBAHUISHOUDENSBUS/GBAHUISHOUDENS2020BUSV1.sav"
+
 
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
@@ -77,5 +91,7 @@ default:
     birthweight_data: "resources/Hoftiezer_Geboortegewicht curves.xlsx"
     boys_sheet: "Tabel jongens"
     girls_sheet: "Tabel meisjes"
-    
+    opleiding_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/OPLEIDINGSNRREFV27.SAV"
+    cto_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/ctorefv10.SAV"
+  
     

@@ -18,7 +18,7 @@ library(readxl)
 # function to get latest perined version of specified year
 get_prnl_filename <- function(year) {
   fl <- list.files(
-    path = file.path(loc$data_folder, "GezondheidWelzijn/PRNL/", year), 
+    path = file.path(loc$data_folder, "GezondheidWelzijn/PRNL", year), 
     pattern = paste0(year, "V[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -58,7 +58,7 @@ for (year in seq(format(dmy(cfg$child_birth_date_min), "%Y"),
   
 }
 
-# remove gestational age below and above given days
+# remove gestational age below given days
 cohort_dat <- cohort_dat %>%
   unique() %>%
   filter(!(amddd < cfg$cut_off_days_min),
@@ -72,7 +72,7 @@ cohort_dat <- cohort_dat %>%
 # function to get latest do version of specified year 
 get_do_filename <- function(year) {
   fl <- list.files(
-    path = file.path(loc$data_folder, "GezondheidWelzijn/DO/"), 
+    path = file.path(loc$data_folder, "GezondheidWelzijn/DO"), 
     pattern = paste0("DO", year, "V[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -83,7 +83,7 @@ get_do_filename <- function(year) {
 # function to get latest do version of specified year 
 get_do_map_filename <- function(year) {
   fl <- list.files(
-    path = file.path(loc$data_folder, "GezondheidWelzijn/DO/", year), 
+    path = file.path(loc$data_folder, "GezondheidWelzijn/DO", year), 
     pattern = paste0("DO ", year, "V[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -136,7 +136,7 @@ death_dat <- death_dat %>%
 # function to get latest doodoorztab version of specified year 
 get_dood_filename <- function(year) {
   fl <- list.files(
-    path = file.path(loc$data_folder, "GezondheidWelzijn/DOODOORZTAB/", year),
+    path = file.path(loc$data_folder, "GezondheidWelzijn/DOODOORZTAB", year),
     pattern = paste0("DOODOORZ", year, "TABV[0-9]+(?i)(.sav)"),
     full.names = TRUE
   )
@@ -147,7 +147,7 @@ get_dood_filename <- function(year) {
 # function to get latest gbaoverlijdenstab version of specified year 
 get_gba_filename <- function(year) {
   fl <- list.files(
-    path = file.path(loc$data_folder, "Bevolking/GBAOVERLIJDENTAB/", year),
+    path = file.path(loc$data_folder, "Bevolking/GBAOVERLIJDENTAB", year),
     pattern = "(?i)(.sav)",
     full.names = TRUE
   )
@@ -158,7 +158,7 @@ get_gba_filename <- function(year) {
 
 dood_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), year = numeric())
 gba_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), date_of_death = character())
-for (year in seq(2013, format(dmy(cfg$child_birth_date_max), "%Y"))) {
+for (year in seq(2013, format(dmy(cfg$child_birth_date_max) + 1, "%Y"))) {
   
   dood_dat <- read_sav(get_dood_filename(year), 
                        col_select = c("RINPERSOONS", "RINPERSOON")) %>%
@@ -199,7 +199,7 @@ rm(death_dat)
 cohort_dat <- cohort_dat %>%
   mutate(
     datumkind = ymd(datumkind),
-    diff_days = abs(as.numeric(difftime(date_of_death, datumkind, units = "days")))
+    diff_days = as.numeric(difftime(date_of_death, datumkind, units = "days"))
   ) 
 
 
