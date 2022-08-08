@@ -368,7 +368,7 @@ woon_dat <-
          !(AANVLEVCYCLWOONNIETWOON > ymd(paste0(cfg$high_school_year_max, "-01-01"))))
 
 
-# add 1 januari data to woon tab to filter for home addresses at 1 jan
+# add 1 January data to woon tab to filter for home addresses at 1 jan
 woon_dat <- 
   woon_dat %>%
   left_join(cohort_dat %>% select(SOORTOBJECTNUMMER, RINOBJECTNUMMER, january), 

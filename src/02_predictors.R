@@ -577,10 +577,10 @@ hh_tab <-
    
    
    # load data for linking education numbers to education levels
-   edu_link <- read_sav(loc$opleiding_data) %>%
-     select(OPLNR, CTO2021V) %>%
-     left_join(read_sav(loc$cto_data) %>%
-                 select(CTO, OPLNIVSOI2016AGG4HB), by = c("CTO2021V" = "CTO")) 
+   # edu_link <- read_sav(loc$opleiding_data) %>%
+   #   select(OPLNR, CTO2021V) %>%
+   #   left_join(read_sav(loc$cto_data) %>%
+   #               select(CTO, OPLNIVSOI2016AGG4HB), by = c("CTO2021V" = "CTO")) 
    
    parents_education <- tibble(RINPERSOONS = factor(), RINPERSOON = character(),
                                education = integer(), year = integer())
@@ -669,7 +669,7 @@ hh_tab <-
      )
    
    
-   rm(parents_education, edu_link)
+   rm(parents_education)
  }
  
  

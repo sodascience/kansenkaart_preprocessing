@@ -73,7 +73,7 @@ default:
     
     # path to the cbs microdata
     gba_data: "Bevolking/GBAPERSOONTAB/2018/GBAPERSOON2018TABV2.sav"
-    gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2019BUSV1.sav"
+    gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2021BUSV1.sav"
     kind_data: "Bevolking/KINDOUDERTAB/2018/KINDOUDER2018TABV1.sav"
     postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2022031.sav"
     vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2022TAB03V2.sav"

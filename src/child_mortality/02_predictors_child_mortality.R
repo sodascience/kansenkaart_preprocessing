@@ -259,8 +259,8 @@ gba_dat <-
                                     "GBAGEBOORTELAND", "GBAGENERATIE", 
                                     "GBAHERKOMSTGROEPERING")) %>% 
   mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
-         GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
-         GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
+         # GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
+         # GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
          GBAGENERATIE = as_factor(GBAGENERATIE, levels = "labels"))
 
 
@@ -319,11 +319,11 @@ cohort_dat <-
 
 #### MIGRATION BACKGROUND ####
 western_tab <- read_sav(loc$migration_data, 
-                        col_select = c("LAND", "LANDTYPE")) %>%
-  mutate(
-    LAND = as_factor(LAND, levels = "labels"),
-    LANDTYPE = as_factor(LANDTYPE, levels = "labels")
-  )
+                        col_select = c("LAND", "LANDTYPE")) 
+# %>% mutate(
+#     LAND = as_factor(LAND, levels = "labels"),
+#     LANDTYPE = as_factor(LANDTYPE, levels = "labels")
+#   )
 
 # create migration variable with origin without third generation
 cohort_dat <- cohort_dat %>%
