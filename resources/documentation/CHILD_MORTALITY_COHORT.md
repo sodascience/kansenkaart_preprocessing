@@ -40,6 +40,11 @@ We have nine migration background categories in our analysis. Migration backgrou
 
 We use the CBS resource file [`LANDAKTUEELREFV10.sav`]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/LANDAKTUEELREF10.sav) from the CBS environment to determine whether a country is a western or a non-western country.
 
+We add data on the number of parents the child grows up with to the cohort to determine whether the child grew up in a single parent household or a two-parents household (`TYPHH` from GBAHUISHOUDENSBUS microdata). 
+
+Lastly, we add the parental education to the cohort from the CBS microdata HOOGSTEOPLTAB. We can only determine the following parental education level: neither WO nor HBO, HBO and WO, since data on parental education has only been available from 1983 for WO, 1986 for HBO and 2004 for MBO. The level of education, neither HBO nor WO, cannot be differentiated further.
+
+
 ## 3. Outcome creation
 The child mortality cohort consists of three outcomes. We define perinatal mortality as a death that occurs between 24 completed weeks of gestation and up to 7 days after birth. We define neonatal mortality as a death that occurs between 24 completed weeks of gestation and up to 28 days after birth. We define infant mortality as a death that occurs between 24 completed weeks of gestation and up to 365 days after birth.
  

@@ -10,7 +10,7 @@ A reproducible preprocessing pipeline for the [KansenKaart]( https://kansenkaart
 
 We begin by measuring the average later-life outcomes (e.g., income) of children for each neighborhood, by demographic subgroups (gender and migration background), and socioeconomic status (parental income). We focus on municipalities, neighborhoods, and postal codes where children grew up, regardless of where they live later in life. We then map these geographical differences in later-life outcomes across areas within the Netherlands. The final results are now available on the interactive website [KansenKaart.nl](https://kansenkaart.nl/), which includes outcomes ranging from health, education, to economic productivity. 
 
-So far, we have a total of 34 outcomes derived from five cohorts. These five cohorts are created using this repository. More detailed information on the cohorts can be found [here]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/documentation/COHORTS.md). The final estimates of these 34 outcomes are created using the repository [kansenkaart analysis](https://github.com/sodascience/kansenkaart_analysis).
+So far, we have a total of 59 outcomes derived from seven cohorts. These seven cohorts are created using this repository. More detailed information on the cohorts can be found [here]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/documentation/COHORTS.md). The final estimates of these 59 outcomes are created using the repository [kansenkaart analysis](https://github.com/sodascience/kansenkaart_analysis).
 
 ## Installation
 - Clone this repository to a folder on your machine
@@ -21,9 +21,12 @@ So far, we have a total of 34 outcomes derived from five cohorts. These five coh
 ## Cohort creation/ usage
 The cohort data sets are created using the file `create_cohort_data.R`. At the top of this file, change the desired input configuration to one of the following:
 - `config/main.yml`
-- `config/perinatal.yml`
+- `config/students.yml`
+
 - `config/high_school.yml`
 - `config/elementary_school.yml`
+- `config/classroom.yml`
+- `config/perinatal.yml`
 
 After this change, run the entire file to create the cohort data set in the scratch folder!
 
