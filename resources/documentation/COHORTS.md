@@ -1,5 +1,5 @@
 # Cohort description
-So far, we have 34 outcomes derived from five cohorts. Here, we briefly describe the five cohorts and the outcomes. 
+So far, we have 58 outcomes derived from five cohorts. Here, we briefly describe the five cohorts and the outcomes. 
 
 ## 1. Main cohort
 The main cohort consists of approximately one million Dutch individuals in their early 30s who were born between 1982 and 1987. We assign these individuals to their earliest known home address, that is, where they live on December 31st, 1994. Parental income is measured between 2003 and 2007. There are 20 outcomes in the main cohort:
