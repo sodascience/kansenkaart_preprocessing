@@ -4,7 +4,8 @@
 #   - Adding perinatal outcomes to the cohort.
 #   - Writing `scratch/03_outcomes.rds`.
 #
-# (c) ODISSEI Social Data Science team 2021
+# (c) ODISSEI Social Data Science team 2022
+
 
 
 #### PACKAGES ####
@@ -34,8 +35,20 @@ cohort_dat <- cohort_dat %>%
     infant_mortality = ifelse((diff_days < 365 & !is.na(diff_days)) |
                                 RINPERSOONS == "I", 1, 0)
     
-  )
+  ) %>%
+  select(-diff_days)
 
+
+#### PREFIX ####
+outcomes <- c("perinatal_mortality", "neonatal_mortality", 
+              "infant_mortality")
+suffix <- "c00_"
+
+# rename outcomes
+cohort_dat <- 
+  cohort_dat %>%
+  rename_with(~str_c(suffix, .), .cols = all_of(outcomes)) %>% 
+  ungroup() 
 
 
 #### WRITE OUTPUT TO SCRATCH ####

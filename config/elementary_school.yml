@@ -7,11 +7,6 @@ default:
     child_birth_date_min: "01/01/2003"
     child_birth_date_max: "31/12/2006"
     
-    # The cohort should live continuously in NL in the following period
-    live_continuously: false
-    child_live_start: ""
-    child_live_end: ""
-    
     # The cohort is allowed to be unregistered for this many days 
     # in this period
     child_live_slack_days: 31
@@ -20,32 +15,18 @@ default:
     parent_min_age_at_birth: 15
     parent_max_age_at_birth: 50
     
-    # Should we use the first address registration of a child as their childhood home?
-    childhood_home_first: false
-    
-     # Should we use the first address registration of a child on a specific date
-    childhood_home_date: false
-    childhood_home_year: "2015-12-31"
-    
     # Should we use the address registration of a child on a specific age
-    childhood_home_age_date: true
     childhood_home_age: 10
     
-    # take the address registration to be their childhood home at date of birth
-    childhood_home_birthyear: false
-    
-    # If we do not, then use the longest address registration before cutoff_year:
-    childhood_home_cutoff_year: 18
-    
    # Postal code link to homes will be considered on this target date
-    postcode_target_date: "31/12/2019"
+    postcode_target_date: "31/12/2022"
     # Neighbourhood geo link to homes will be considered on this target date
-    gwb_target_date: "31/12/2019"
+    gwb_target_date: "31/12/2022"
     # Corop geo link to homes will be considered on this target date
-    corop_target_date: "31/12/2019"
+    corop_target_date: "31/12/2022"
     
     # Income will be deflated to cpi_base_year euros.
-    cpi_base_year: 2018
+    cpi_base_year: 2020
     
     # Parent income year range
     parent_income_year_min: 2014
@@ -53,10 +34,7 @@ default:
     
     # Parent wealth year range
     parent_wealth_year_min: 2014
-    parent_wealth_year_max: 2018
-    
-    # censor income above this value
-    income_censoring_value: 1200000
+    parent_wealth_year_max: 2017
     
     # The parents education will be added to to the cohort
     education_parents: true
@@ -75,19 +53,20 @@ default:
     # path to the cbs microdata
     gba_data: "Bevolking/GBAPERSOONTAB/2018/GBAPERSOON2018TABV2.sav"
     gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2021BUSV1.sav"
-    kind_data: "Bevolking/KINDOUDERTAB/2018/KINDOUDER2018TABV1.sav"
+    kind_data: "Bevolking/KINDOUDERTAB/KINDOUDER2021TABV1.sav"
     postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2022031.sav"
     vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2022TAB03V2.sav"
-    woon_data: "BouwenWonen/LEVCYCLWOONNIETWOONBUS/2018/LEVCYCLWOONNIETWOONBUSV2018121.sav"
+    woon_data: "BouwenWonen/LEVCYCLWOONNIETWOONBUS/LEVCYCLWOONNIETWOONBUSV2021122.sav"
     household_data: "Bevolking/GBAHUISHOUDENSBUS/GBAHUISHOUDENS2020BUSV1.sav"
 
+
     # resources
-    cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
-    migration_data: "resources/LANDAKTUEELREF10.sav"
-    corop_data: "resources/gemeenten_corop_1981.xlsx"
+    cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_14112022_221558.xlsx"
+    migration_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/LANDAKTUEELREFV11.SAV"
+    corop_data: "K:/Utilities/HULPbestanden/GebiedeninNederland/Gemeenten en COROP vanaf 1981.xlsx"
     advice_data: "resources/vo_advisering.xlsx"
     advice_data_sheet: "table"
-    opleiding_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/OPLEIDINGSNRREFV27.SAV"
-    cto_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/ctorefv10.SAV"
+    opleiding_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/OPLEIDINGSNRREFV29.SAV"
+    cto_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/CTOREFV11.SAV"
   
 

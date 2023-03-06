@@ -6,7 +6,7 @@
 #   - Adding postal code / region information to the cohort.
 #   - Writing `scratch/01_cohort.rds`.
 #
-# (c) ODISSEI Social Data Science team 2021
+# (c) ODISSEI Social Data Science team 2022
 
 
 #### PACKAGES ####
@@ -25,8 +25,8 @@ gba_dat <-
   mutate(birthdate = dmy(paste(GBAGEBOORTEDAG, GBAGEBOORTEMAAND, GBAGEBOORTEJAAR, sep = "-"))) %>% 
   select(-GBAGEBOORTEJAAR, -GBAGEBOORTEMAAND, -GBAGEBOORTEDAG) %>%
   mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
-         # GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
-         # GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
+         GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
+         GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
          GBAGENERATIE = as_factor(GBAGENERATIE, levels = "labels"),
          GBAGESLACHT = as_factor(GBAGESLACHT, levels = "labels"))
 

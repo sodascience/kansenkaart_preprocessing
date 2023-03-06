@@ -4,13 +4,9 @@
 #   - Selecting variables of interest.
 #   - Writing `scratch/kansenkaart_data.rds`.
 #
-# (c) ODISSEI Social Data Science team 2021
+# (c) ODISSEI Social Data Science team 2022
 
-#### PACKAGES ####
-library(tidyverse)
-library(lubridate)
-library(haven)
-library(readxl)
+
 
 # load cohort dataset
 cohort_dat <- read_rds(file.path(loc$scratch_folder, "03_outcomes.rds"))
@@ -18,11 +14,8 @@ cohort_dat <- read_rds(file.path(loc$scratch_folder, "03_outcomes.rds"))
 
 
 
-
-
+  
 # save as cohort name
 output_file <- file.path(loc$scratch_folder, paste0(cfg$cohort_name, "_cohort.rds"))
 write_rds(cohort_dat, output_file)
-
-
 

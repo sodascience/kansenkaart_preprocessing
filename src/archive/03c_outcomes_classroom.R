@@ -37,7 +37,7 @@ school_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), WPOLEERJA
                      WPOBRIN_crypt = character(), WPOBRINVEST = character(), WPOGROEPSGROOTTE = character(),
                      WPOREKENEN = character(), WPOTAALLV = character(), WPOTAALTV = character(),
                      WPOTOETSADVIES = character(), WPOADVIESVO = character(), 
-                     WPOADVIESHERZ = character())
+                     WPOADVIESHERZ = character(), WPOTYPEPO = character())
 for (year in seq(as.integer(cfg$classroom_year_min), as.integer(cfg$classroom_year_max))) {
   school_dat <- 
     # read file from disk
@@ -45,7 +45,7 @@ for (year in seq(as.integer(cfg$classroom_year_min), as.integer(cfg$classroom_ye
              col_select = c("RINPERSOONS", "RINPERSOON", "WPOLEERJAAR", "WPOGROEPSGROOTTE",
                            "WPOTOETSADVIES","WPOADVIESVO", "WPOADVIESHERZ", 
                            "WPOREKENEN", "WPOTAALLV", "WPOTAALTV",
-                           "WPOBRIN_crypt", "WPOBRINVEST")) %>% 
+                           "WPOBRIN_crypt", "WPOBRINVEST", "WPOTYPEPO")) %>% 
     mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value")) %>%
     # add year
     mutate(year = year) %>% 
@@ -119,10 +119,10 @@ gba_dat <-
            GBAGEBOORTEDAGVADER, GBAGEBOORTEMAANDVADER, GBAGEBOORTEJAARVADER,
            GBAGEBOORTEDAGMOEDER, GBAGEBOORTEMAANDMOEDER, GBAGEBOORTEJAARMOEDER)) %>%
   mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
-         # GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
-         # GBAGEBOORTELANDMOEDER = as_factor(GBAGEBOORTELANDMOEDER, levels = "labels"),
-         # GBAGEBOORTELANDVADER = as_factor(GBAGEBOORTELANDVADER, levels = "labels"),
-         # GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
+         GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
+         GBAGEBOORTELANDMOEDER = as_factor(GBAGEBOORTELANDMOEDER, levels = "labels"),
+         GBAGEBOORTELANDVADER = as_factor(GBAGEBOORTELANDVADER, levels = "labels"),
+         GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
          GBAGENERATIE = as_factor(GBAGENERATIE, levels = "labels"),
          GBAGESLACHT = as_factor(GBAGESLACHT, levels = "labels"))
 

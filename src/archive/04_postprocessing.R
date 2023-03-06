@@ -20,7 +20,8 @@ cohort_dat <-
     (income_parents_perc >= .65 & income_parents_perc <= .85) ~ "High",
     TRUE ~ NA_character_
   ), levels = c("Low", "Mid", "High"))) %>% 
-  mutate(geslacht = as.factor(as.character(GBAGESLACHT)))
+  mutate(geslacht = as.factor(as.character(GBAGESLACHT)),
+         migration_third = as.factor(migration_third)) # EDIT EJ
 
 
 # add c##_* to variable names
@@ -70,7 +71,8 @@ if (cfg$cohort_name == "main") {
 # rename outcomes
 cohort_dat <- 
   cohort_dat %>%
-  rename_with(~str_c(suffix, .), .cols = all_of(outcomes))
+  rename_with(~str_c(suffix, .), .cols = all_of(outcomes)) %>% 
+  ungroup() # EDIT EJ
 
 
   

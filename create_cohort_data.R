@@ -2,12 +2,21 @@
 #
 # Full cohort creation script
 #
-# (c) ODISSEI Social Data Science team 2022
+# (c) ODISSEI Social Data Science team 2023
 
+
+
+# clean workspace
+rm(list=ls())
+setwd("H:/IGM project/kansenkaart_preprocessing")
+options(scipen=999)
 
 
 # input the desired config file here:
-cfg_file <- "config/classroom.yml"
+# yml: main, students, high_school, elementary_school, classroom, 
+# perinatal, child_mortality
+cohort <- "main"
+cfg_file <- paste0("config/", cohort, ".yml")
 
 
 #### CONFIGURATION ####
@@ -18,17 +27,18 @@ loc <- config::get("file_locations",   file = cfg_file)
 # create the scratch folder
 if (!dir.exists(loc$scratch_folder)) dir.create(loc$scratch_folder)
 
+
 #### RUN ####
 # select cohort
-source("src/01_cohort.R")
+source(list.files(file.path("src", cfg$cohort_nam), "01_", full.names = TRUE))
 
 # add predictors
-source("src/02_predictors.R")
+source(list.files(file.path("src", cfg$cohort_nam), "02_", full.names = TRUE))
 
 # add outcomes
-source(list.files("src", cfg$cohort_name, full.names = TRUE))
+source(list.files(file.path("src", cfg$cohort_nam), "03_", full.names = TRUE))
 
 # post-process
-source("src/04_postprocessing.R")
+source(list.files(file.path("src", cfg$cohort_nam), "04_", full.names = TRUE))
 
 # the pre-processed cohort data file is now available in the scratch folder!

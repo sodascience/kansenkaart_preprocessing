@@ -192,8 +192,10 @@ cohort_dat <- cohort_dat %>%
 #### HOURLY INCOME ####
 # these come from the spolis tab
 get_spolis_filename <- function(year) {
+  # function to get latest ipi version of specified year
+  # get all ipi files with the specified year
   fl <- list.files(
-    path = file.path(loc$data_folder, loc$spolis_data, year),
+    path = file.path(loc$data_folder, loc$spolis_data, "/", year),
     pattern = paste0("SPOLISBUS", year, "V[0-9]+\\.sav"), 
     full.names = TRUE
   )
@@ -384,6 +386,7 @@ cohort_dat <- cohort_dat %>%
          specialist_mhc     = ifelse(is.na(specialist_mhc), 0, specialist_mhc),
          hospital           = ifelse(is.na(hospital), 0, hospital),
          total_health_costs = ifelse(is.na(total_health_costs), 0, total_health_costs))
+
 
 rm(health_tab)
 

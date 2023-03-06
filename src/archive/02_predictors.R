@@ -8,10 +8,12 @@
 # (c) ODISSEI Social Data Science team 2022
 
 
+
 #### PACKAGES ####
 library(tidyverse)
 library(lubridate)
 library(haven)
+
 
 
 #### CONFIGURATION ####
@@ -38,12 +40,12 @@ cpi_tab <-
   )
 
 
+
 #### PARENT INCOME ####
 
 # get income data from each requested year into single data frame
 get_ipi_filename <- function(year) {
-  # function to get latest ipi version of specified year
-  # get all ipi files with the specified year
+  # function to get latest version of specified year
   fl <- list.files(
     path = file.path(loc$data_folder, "InkomenBestedingen/INTEGRAAL PERSOONLIJK INKOMEN", year),
     pattern = paste0("PERSOONINK", year, "TABV[0-9]+\\.sav"), 
@@ -54,8 +56,7 @@ get_ipi_filename <- function(year) {
 }
 
 get_inpa_filename <- function(year) {
-  # function to get latest inpa version of specified year
-  # get all inpa files with the specified year
+  # function to get latest version of specified year
   fl <- list.files(
     path = file.path(loc$data_folder, "InkomenBestedingen/INPATAB"),
     pattern = paste0("INPA", year, "TABV[0-9]+\\.sav"), 
@@ -136,13 +137,17 @@ cohort_dat <- left_join(
   x = cohort_dat, 
   y = income_parents %>% rename(income_ma = income, income_n_ma = income_n), 
   by = c("RINPERSOONMa" = "RINPERSOON", "RINPERSOONSMa" = "RINPERSOONS")
-)
+) %>%
+  select(-income_n_ma)
+
 # fathers
 cohort_dat <- left_join(
   x = cohort_dat, 
   y = income_parents %>% rename(income_pa = income, income_n_pa = income_n), 
   by = c("RINPERSOONpa" = "RINPERSOON", "RINPERSOONSpa" = "RINPERSOONS")
-)
+) %>%
+  select(-income_n_pa)
+
 
 # free up memory
 rm(income_parents)
@@ -171,10 +176,10 @@ cohort_dat <-
   cohort_dat %>% 
   ungroup() %>%
   mutate(
-    income_parents_1log = log1p(income_parents),
     income_parents_rank = rank(income_parents, ties.method = "average"),
     income_parents_perc = income_parents_rank / max(income_parents_rank)
   )
+
 
 
 #### PARENT WEALTH ####
@@ -215,6 +220,7 @@ get_koppel_filename <- function(year) {
 }
 
 
+#TODO: change inha tab to vehtab (variable: VEHW1000VERH)
 parents <- c(cohort_dat$RINPERSOONMa, cohort_dat$RINPERSOONSMa,
              cohort_dat$RINPERSOONpa, cohort_dat$RINPERSOONSpa)
 
@@ -253,8 +259,8 @@ for (year in seq(as.integer(cfg$parent_wealth_year_min), as.integer(cfg$parent_w
     # load koppel data person to household
     koppel_hh <- read_sav(get_koppel_filename(year)) %>%
       # select only incomes of parents
-      filter(RINPERSOON %in% parents) %>%
-      mutate(RINPERSOONSHKW = as_factor(RINPERSOONSHKW, levels = "value"),
+      filter(RINPERSOON %in% parents) %>% 
+      mutate(RINPERSOONSHKW = as_factor(RINPERSOONSHKW, levels = "value"), 
              RINPERSOONS = as_factor(RINPERSOONS, levels = "value"))
 
     # use INHA tab
@@ -333,11 +339,11 @@ cohort_dat <- cohort_dat %>%
 
 
 # if wealth_parents is negative then wealth_parents becomes NA
-cohort_dat <-
+cohort_dat <- 
   cohort_dat %>%
   mutate(wealth_parents = ifelse(wealth_parents < 0, NA, wealth_parents))
 
-# remove income if wealth_parents is NA
+# remove income if wealth_parents is NA 
 cohort_dat <-
   cohort_dat %>%
   filter(!is.na(wealth_parents))
@@ -351,8 +357,8 @@ gba_dat <-
   read_sav(gba_path, col_select = c("RINPERSOONS", "RINPERSOON", "GBAGEBOORTELAND", 
                                     "GBAGENERATIE", "GBAHERKOMSTGROEPERING")) %>% 
   mutate(RINPERSOONS  = as_factor(RINPERSOONS,  levels = "values"),
-         # GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"), 
-         GBAGENERATIE = as_factor(GBAGENERATIE, levels = "label"))
+         GBAGENERATIE = as_factor(GBAGENERATIE, levels = "label"),
+         GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"))
 
 # add parents generation to cohort
 cohort_dat <- cohort_dat %>% 
@@ -362,6 +368,7 @@ cohort_dat <- cohort_dat %>%
   left_join(gba_dat,
             by = c("RINPERSOONMa" = "RINPERSOON", "RINPERSOONSMa" = "RINPERSOONS"),
             suffix = c("", "_ma"))
+
 
 
 # replace autochtoon to third generation if one of the parents were second generation  (2) 
@@ -399,7 +406,8 @@ cohort_dat <-
     ),
     # except when mom is not second generation, then dad's origin
     GBAHERKOMSTGROEPERING_third = ifelse(
-      GBAGENERATIE_third == "derde generatie allochtoon" & (GBAGENERATIE_ma != "tweede generatie allochtoon" | is.na(GBAGENERATIE_ma)),
+      GBAGENERATIE_third == "derde generatie allochtoon" & (GBAGENERATIE_ma != "tweede generatie allochtoon" | 
+                                                              is.na(GBAGENERATIE_ma)),
       GBAHERKOMSTGROEPERING_pa, 
       GBAHERKOMSTGROEPERING_third
     )
@@ -407,11 +415,11 @@ cohort_dat <-
 
 #### MIGRATION BACKGROUND ####
 western_tab <- read_sav(loc$migration_data, 
-                        col_select = c("LAND", "LANDTYPE")) 
-# %>% mutate(
-#     LAND = as_factor(LAND, levels = "labels"),
-#     LANDTYPE = as_factor(LANDTYPE, levels = "labels")
-#   )
+                        col_select = c("LAND", "LANDTYPE")) %>%
+  mutate(
+    LAND = as_factor(LAND, levels = "labels"),
+    LANDTYPE = as_factor(LANDTYPE, levels = "labels")
+  )
 
 # create migration variable with origin without third generation
 cohort_dat <- cohort_dat %>%
@@ -450,7 +458,7 @@ rm(gba_dat, western_tab)
   mutate(
     DATUMAANVANGHH = ymd(DATUMAANVANGHH),
     DATUMEINDEHH = ymd(DATUMEINDEHH)
-  )
+  ) 
 
 
 if (cfg$childhood_home_first) {
@@ -544,7 +552,8 @@ hh_tab <-
  hh_tab <- 
    hh_tab %>%
    mutate(single_parents = ifelse(type_hh == "6", 1, 0), 
-          two_parents = ifelse(type_hh %in% c("2", "3", "4", "5"), 1, 0))
+          two_parents = ifelse(type_hh %in% c("2", "3", "4", "5"), 1, 0)) %>%
+   select(-type_hh)
    
  cohort_dat <- 
    cohort_dat %>%
@@ -577,10 +586,10 @@ hh_tab <-
    
    
    # load data for linking education numbers to education levels
-   # edu_link <- read_sav(loc$opleiding_data) %>%
-   #   select(OPLNR, CTO2021V) %>%
-   #   left_join(read_sav(loc$cto_data) %>%
-   #               select(CTO, OPLNIVSOI2016AGG4HB), by = c("CTO2021V" = "CTO")) 
+   edu_link <- read_sav(loc$opleiding_data) %>%
+     select(OPLNR, CTO2021V) %>%
+     left_join(read_sav(loc$cto_data) %>%
+                 select(CTO, OPLNIVSOI2016AGG4HB), by = c("CTO2021V" = "CTO")) 
    
    parents_education <- tibble(RINPERSOONS = factor(), RINPERSOON = character(),
                                education = integer(), year = integer())
@@ -669,7 +678,7 @@ hh_tab <-
      )
    
    
-   rm(parents_education)
+   rm(parents_education, edu_link)
  }
  
  

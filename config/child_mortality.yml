@@ -12,28 +12,26 @@ default:
     parent_max_age_at_birth: 50
 
    # Postal code link to homes will  be considered on this target date
-    postcode_target_date: "31/12/2019"
+    postcode_target_date: "31/12/2022"
     # Neighbourhood geo link to homes will be considered on this target date
-    gwb_target_date: "31/12/2019"
+    gwb_target_date: "31/12/2022"
     # Corop geo link to homes will be considered on this target date
-    corop_target_date: "31/12/2019"
+    corop_target_date: "31/12/2022"
     
     # Income will be deflated to cpi_base_year euros.
-    cpi_base_year: 2018
+    cpi_base_year: 2020
     
     # Parent income year range
-    parent_income_year_min: 2014
-    parent_income_year_max: 2018
+    parent_income_year_min: 2010
+    parent_income_year_max: 2014
     
-    # censor income above this value
-    income_censoring_value: 1200000
+    # Parent wealth year range
+    parent_wealth_year_min: 2010
+    parent_wealth_year_max: 2018
     
     # remove gestational age at given days
     cut_off_days_min: 168
     cut_off_days_max: 294
-  
-    # The parents education will be added to to the cohort
-    education_parents: false
     
     # when we measure the household composition of the child
     childhood_home_age: 0
@@ -47,16 +45,16 @@ default:
     # path to the cbs microdata
     gba_data: "Bevolking/GBAPERSOONTAB/2018/GBAPERSOON2018TABV2.sav"
     gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2021BUSV1.sav"
-    kind_data: "Bevolking/KINDOUDERTAB/2018/KINDOUDER2018TABV1.sav"
+    kind_data: "Bevolking/KINDOUDERTAB/KINDOUDER2021TABV1.sav"
     postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2022031.sav"
     vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2022TAB03V2.sav"
     household_data: "Bevolking/GBAHUISHOUDENSBUS/GBAHUISHOUDENS2020BUSV1.sav"
 
   
     # resources
-    cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_07012021_123946.csv"
-    migration_data: "resources/LANDAKTUEELREF10.sav"
-    corop_data: "resources/gemeenten_corop_1981.xlsx"
-    opleiding_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/OPLEIDINGSNRREFV27.SAV"
-    cto_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/ctorefv10.SAV"
+    cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_14112022_221558.xlsx"
+    migration_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/LANDAKTUEELREFV11.SAV"
+    corop_data: "K:/Utilities/HULPbestanden/GebiedeninNederland/Gemeenten en COROP vanaf 1981.xlsx"
+    opleiding_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/OPLEIDINGSNRREFV29.SAV"
+    cto_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/CTOREFV11.SAV"
   

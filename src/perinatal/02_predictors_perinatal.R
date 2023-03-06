@@ -1,7 +1,7 @@
 # Kansenkaart data preparation pipeline
 #
 # 2. Predictor creation.
-#    - Adding household income and income percentile to the cohort.
+#    - Adding parent income and income percentile to the cohort.
 #    - Adding migration background information to the cohort.
 #    - Writing `scratch/02_predictor.rds`
 #
@@ -15,15 +15,12 @@ library(lubridate)
 library(haven)
 library(readxl)
 
+
 #### CONFIGURATION ####
 # load main cohort dataset
 cohort_dat <- read_rds(file.path(loc$scratch_folder, "01_cohort.rds")) %>%
-  # create variable that reflects the year the child turned a specific age 
-  mutate(birth_year = year(datumkind)) %>%
-  ungroup()
+  mutate(birth_year = year(birthdate))
 
-
-#### PARENT INCOME ####
 
 # create a table with incomes at the cpi_base_year level
 # first, load consumer price index data (2015 = 100)
@@ -37,14 +34,16 @@ cpi_tab <- cpi_tab %>%
     cpi = cpi / cpi_tab %>% filter(year == cfg$cpi_base_year) %>% pull(cpi) * 100)
 
 
-#### LINK MOTHER RINPERSOON TO HOUSEHOLD RINPERSOON ####
+
+#### PARENT INCOME ####
+
 # get income data from each requested year into single data frame
 get_ipi_filename <- function(year) {
   # function to get latest ipi version of specified year
   # get all ipi files with the specified year
   fl <- list.files(
     path = file.path(loc$data_folder, "InkomenBestedingen/INTEGRAAL PERSOONLIJK INKOMEN", year),
-    pattern = paste0("PERSOONINK", year), 
+    pattern = paste0("PERSOONINK", year, "TABV[0-9]+\\.sav"),
     full.names = TRUE
   )
   # return only the latest version
@@ -56,19 +55,131 @@ get_inpa_filename <- function(year) {
   # get all inpa files with the specified year
   fl <- list.files(
     path = file.path(loc$data_folder, "InkomenBestedingen/INPATAB"),
-    pattern = paste0("INPA", year), 
+    pattern = paste0("INPA", year, "TABV[0-9]+\\.sav"),
     full.names = TRUE
   )
   # return only the latest version
   sort(fl, decreasing = TRUE)[1]
 }
 
-mothers <- c(cohort_dat$rinpersoons_moeder, cohort_dat$rinpersoon_moeder)
+# parents <- c(cohort_dat$RINPERSOONMa, cohort_dat$RINPERSOONSMa, 
+#              cohort_dat$RINPERSOONpa, cohort_dat$RINPERSOONSpa)
+# 
+# income_parents <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), 
+#                          income = double(), year = integer())
+# for (year in seq(as.integer(cfg$parent_income_year_min), as.integer(cfg$parent_income_year_max))) {
+#   if (year < 2011) {
+#     # use IPI tab
+#     income_parents <- 
+#       # read file from disk
+#       read_sav(get_ipi_filename(year), col_select = c("RINPERSOONS", "RINPERSOON", "PERSBRUT")) %>% 
+#       rename(income = PERSBRUT) %>% 
+#       mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value")) %>%
+#       # select only incomes of parents
+#       filter(RINPERSOON %in% parents) %>% 
+#       # add year
+#       mutate(year = year) %>% 
+#       # add to income parents
+#       bind_rows(income_parents, .)
+#   } else {
+#     # use INPA tab
+#     income_parents <- 
+#       # read file from disk
+#       read_sav(get_inpa_filename(year), col_select = c("RINPERSOONS", "RINPERSOON", "INPPERSBRUT")) %>% 
+#       rename(income = INPPERSBRUT) %>% 
+#       mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value")) %>%
+#       # select only incomes of parents
+#       filter(RINPERSOON %in% parents) %>% 
+#       # add year
+#       mutate(year = year) %>% 
+#       # add to income parents
+#       bind_rows(income_parents, .)
+#   }
+# }
+# 
+# # remove NA incomes
+# income_parents <-
+#   income_parents %>% 
+#   mutate(
+#     income = ifelse(income == 999999999 | income == 9999999999, NA, income))
+# 
+# # deflate
+# income_parents <- 
+#   income_parents %>% 
+#   left_join(cpi_tab %>% select(year, cpi), by = "year") %>% 
+#   mutate(income = income / (cpi / 100)) %>% 
+#   select(-cpi)
+# 
+# 
+# 
+# # compute mean
+# income_parents <- 
+#   income_parents %>% 
+#   group_by(RINPERSOON, RINPERSOONS) %>% 
+#   summarize(income_n = sum(!is.na(income)),
+#             income   = mean(income, na.rm = TRUE)) 
+# 
+# # table of the number of years the mean income is based on
+# print(table(`income years` = income_parents$income_n))
+# 
+# # add to data
+# # mothers
+# cohort_dat <- left_join(
+#   x = cohort_dat, 
+#   y = income_parents %>% rename(income_ma = income, income_n_ma = income_n), 
+#   by = c("RINPERSOONMa" = "RINPERSOON", "RINPERSOONSMa" = "RINPERSOONS")
+# ) %>%
+#   select(-income_n_ma)
+# # fathers
+# cohort_dat <- left_join(
+#   x = cohort_dat, 
+#   y = income_parents %>% rename(income_pa = income, income_n_pa = income_n), 
+#   by = c("RINPERSOONpa" = "RINPERSOON", "RINPERSOONSpa" = "RINPERSOONS")
+# ) %>%
+#   select(-income_n_pa)
+# 
+# # free up memory
+# rm(income_parents)
+# 
+# # parents
+# cohort_dat <- cohort_dat %>% 
+#   rowwise() %>%
+#   mutate(income_parents =  sum(income_ma, income_pa, na.rm = TRUE),
+#          income_parents = ifelse((is.na(income_ma) & is.na(income_pa)), 
+#                                  NA, income_parents))
+# 
+# 
+# # if income_parents is negative then income_parents becomes NA
+# cohort_dat <- 
+#   cohort_dat %>%
+#   mutate(income_parents = ifelse(income_parents < 0, NA, income_parents))%>%
+#   # remove income if income_parents is NA (parents income is NA is all years)
+#   filter(!is.na(income_parents))
+# 
+# 
+# # compute income transformations
+# cohort_dat <- 
+#   cohort_dat %>%
+#   group_by(birth_year) %>%
+#   mutate(
+#     income_parents_rank = rank(income_parents, ties.method = "average"),
+#     income_parents_perc = income_parents_rank / max(income_parents_rank)
+#   ) %>%
+#   select(-c(income_parents_rank, income_ma, income_pa)) %>%
+#   ungroup()
+# 
+# 
+
+#### HOUSEHOLD INCOME ####
+
+
+# LINK MOTHER RINPERSOON TO HOUSEHOLD RINPERSOON
+
+mothers <- c(cohort_dat$RINPERSOONSMa, cohort_dat$RINPERSOONMa)
 mothers_rinpersoon <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), 
                              RINPERSOONSHKW = factor(), RINPERSOONHKW = character(),
                              year = double())
-for (year in seq(as.integer(cfg$parent_income_year_min), 
-                 as.integer(cfg$parent_income_year_max))) {
+for (year in seq(as.integer(cfg$parent_income_year_min), as.integer(cfg$parent_income_year_max))) {
   if (year < 2011) {
     # use IPI tab
     mothers_rinpersoon <- 
@@ -79,8 +190,7 @@ for (year in seq(as.integer(cfg$parent_income_year_min),
              RINPERSOONHKW = RINPERSOONKERN) %>%
       mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value"),
              RINPERSOONSHKW = as_factor(RINPERSOONSHKW, levels = "value"),
-             year = year
-      ) %>%
+             year = year) %>%
       # select only incomes of mothers
       filter(RINPERSOON %in% mothers) %>% 
       # add to mothers rinpersoon
@@ -93,14 +203,14 @@ for (year in seq(as.integer(cfg$parent_income_year_min),
                                                        "RINPERSOONSHKW", "RINPERSOONHKW")) %>% 
       mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value"),
              RINPERSOONSHKW = as_factor(RINPERSOONSHKW, levels = "value"),
-             year = year
-      ) %>%
+             year = year) %>%
       # select only mothers
       filter(RINPERSOON %in% mothers) %>% 
       # add to mothers
       bind_rows(mothers_rinpersoon, .)
   }
 }
+
 
 
 #### HOUSEHOLD INCOME ####
@@ -129,12 +239,10 @@ get_inha_filename <- function(year) {
   sort(fl, decreasing = TRUE)[1]
 }
 
+
 income_household <- tibble(RINPERSOONSHKW = factor(), RINPERSOONHKW = character(), 
                            household_income = double(), year = integer())
-
-for (year in seq(as.integer(cfg$parent_income_year_min), 
-                 as.integer(cfg$parent_income_year_max))) {
-  
+for (year in seq(as.integer(cfg$parent_income_year_min), as.integer(cfg$parent_income_year_max))) {
   if (year < 2011) {
     # use IHI tab
     income_household <- 
@@ -167,8 +275,9 @@ for (year in seq(as.integer(cfg$parent_income_year_min),
 income_household <-
   income_household %>% 
   mutate(household_income = ifelse(household_income == 999999999 | 
-                                     household_income == 9999999999, NA, household_income)) 
-  
+                                     household_income == 9999999999, NA,
+                                   household_income)) 
+
 # deflate
 income_household <- 
   income_household %>% 
@@ -197,8 +306,8 @@ print(table(`income years` = income_household$household_income_n))
 
 
 cohort_dat <- cohort_dat %>%
-  inner_join(income_household, by = c("rinpersoons_moeder" = "RINPERSOONS",
-                                      "rinpersoon_moeder" = "RINPERSOON"))
+  inner_join(income_household, by = c("RINPERSOONSMa" = "RINPERSOONS",
+                                      "RINPERSOONMa" = "RINPERSOON"))
 
 rm(income_household)
 
@@ -207,24 +316,29 @@ rm(income_household)
 cohort_dat <- 
   cohort_dat %>%
   mutate(household_income = ifelse(household_income < 0, NA, household_income)) %>%
-# remove income if household_income is NA 
+  # remove income if household_income is NA 
   filter(!is.na(household_income))
 
 
 # compute income transformations
 cohort_dat <- 
   cohort_dat %>% 
-  group_by(year) %>%
+  group_by(birth_year) %>%
   mutate(
     income_household_rank = rank(household_income, ties.method = "average"),
     income_household_perc = income_household_rank / max(income_household_rank)
-  ) %>% ungroup() %>%
-  select(-c(income_household_rank, household_income_n))
+  ) %>%
+  select(-c(income_household_rank, household_income_n)) %>%
+  ungroup()
 
+
+# remove parents income and replace with household income
 cohort_dat <- 
-  cohort_dat %>% 
-  rename(income_parents      = household_income,
+  cohort_dat %>%
+  rename( 
+         income_parents      = household_income,
          income_parents_perc = income_household_perc)
+
 
 
 #### PARENT WEALTH ####
@@ -265,12 +379,14 @@ get_koppeltabel_filename <- function(year) {
 }
 
 parents_dat <- cohort_dat %>%
-  select(rinpersoons_moeder, rinpersoon_moeder)
+  select(RINPERSOONS, RINPERSOON, RINPERSOONMa, 
+         RINPERSOONSMa, RINPERSOONpa, RINPERSOONSpa)
 
-parents <- c(cohort_dat$rinpersoons_moeder, cohort_dat$rinpersoon_moeder)
+parents <- c(cohort_dat$RINPERSOONMa, cohort_dat$RINPERSOONSMa,
+             cohort_dat$RINPERSOONpa, cohort_dat$RINPERSOONSpa)
 
-wealth_parents <- tibble(rinpersoons_moeder = factor(), rinpersoon_moeder = character(),
-                         wealth = double(), year = integer())
+wealth_parents <- tibble(RINPERSOONS = factor(), RINPERSOON = character(),
+                         wealth_parents = double(), year = integer())
 for (year in seq(as.integer(cfg$parent_wealth_year_min), as.integer(cfg$parent_wealth_year_max))) {
   
   if (year <= 2010) {
@@ -310,21 +426,42 @@ for (year in seq(as.integer(cfg$parent_wealth_year_min), as.integer(cfg$parent_w
   
   
   # add to data
+  # mothers
   wealth_dat <- left_join(parents_dat, veh_parents,
-                          by = c("rinpersoons_moeder" = "RINPERSOONS",
-                                 "rinpersoon_moeder" = "RINPERSOON")
+                          by = c("RINPERSOONSMa" = "RINPERSOONS",
+                                 "RINPERSOONMa" = "RINPERSOON")
   ) %>%
+    rename(wealth_ma = wealth, 
+           RINPERSOONSHKW_ma = RINPERSOONSHKW,
+           RINPERSOONHKW_ma = RINPERSOONHKW)
+  
+  # fathers
+  wealth_dat <- left_join(wealth_dat, veh_parents,
+                          by = c("RINPERSOONSpa" = "RINPERSOONS",
+                                 "RINPERSOONpa" = "RINPERSOON")
+  ) %>%
+    rename(wealth_pa = wealth, 
+           RINPERSOONSHKW_pa = RINPERSOONSHKW,
+           RINPERSOONHKW_pa = RINPERSOONHKW)
+  
+  # if RINPERSOONHKW is the same for mother and father, keep the same wealth
+  # if RINPERSOONHKW is different for mother and father, sum wealth_ma and wealth_pa
+  wealth_dat <- 
+    wealth_dat %>%
+    rowwise() %>%
+    mutate(wealth_parents = ifelse(RINPERSOONHKW_ma == RINPERSOONHKW_pa, wealth_pa, 
+                                   sum(c(wealth_ma, wealth_pa), na.rm = TRUE)), 
+           wealth_parents = ifelse(is.na(wealth_pa), wealth_ma, wealth_parents), 
+           wealth_parents = ifelse(is.na(wealth_ma), wealth_pa, wealth_parents)
+    ) %>%
     # add year
     mutate(year = year) %>%
-    select(rinpersoons_moeder, rinpersoon_moeder, wealth, year)
+    select(RINPERSOONS, RINPERSOON, wealth_parents, year)
   
   wealth_parents <- bind_rows(wealth_parents, wealth_dat)
 }
 rm(veh_parents, koppel_hh, wealth_dat, parents_dat)
 
-
-wealth_parents <- wealth_parents %>%
-  unique()
 
 # add year of child specific age at which we measure parental wealth
 wealth_age <- abs(min(cohort_dat$birth_year) - 
@@ -332,14 +469,13 @@ wealth_age <- abs(min(cohort_dat$birth_year) -
 
 cohort_dat <- 
   cohort_dat %>%
-  mutate(wealth_age = birth_year + wealth_age)
+  mutate(wealth_age = as.numeric(birth_year + wealth_age))
 
 cohort_dat <- 
   cohort_dat %>%
-  left_join(wealth_parents, by = c("rinpersoons_moeder" = "rinpersoons_moeder",
-                                   "rinpersoon_moeder" = "rinpersoon_moeder",
+  left_join(wealth_parents, by = c("RINPERSOONS" = "RINPERSOONS",
+                                   "RINPERSOON" = "RINPERSOON",
                                    "wealth_age"  = "year")) %>%
-  rename(wealth_parents = wealth) %>%
   select(-wealth_age)
 
 rm(wealth_parents)
@@ -357,55 +493,42 @@ cohort_dat <-
 
 
 
-
 #### THIRD GENERATION ####
 
-#### ADD ORIGIN AND GENERATION OF THE CHILD ####
+# import gba for parents generation and origin
 gba_path <- file.path(loc$data_folder, loc$gba_data)
 gba_dat <-  
   read_sav(gba_path, col_select = c("RINPERSOONS", "RINPERSOON",
-                                    "GBAGEBOORTELAND", "GBAGENERATIE", 
-                                    "GBAHERKOMSTGROEPERING")) %>% 
-  mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
-         GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
-         GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
-         GBAGENERATIE = as_factor(GBAGENERATIE, levels = "labels"))
+                                    "GBAGENERATIE", "GBAHERKOMSTGROEPERING")) %>% 
+  mutate(RINPERSOONS  = as_factor(RINPERSOONS,  levels = "values"),
+         GBAGENERATIE = as_factor(GBAGENERATIE, levels = "label"),
+         GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"))
 
-
-# merge to child
-cohort_dat <- cohort_dat %>%
-  left_join(gba_dat, by = c("RINPERSOONS", "RINPERSOON"))
-
-
-# merge to mother
-cohort_dat <- cohort_dat %>%
-  left_join(gba_dat, by = c("rinpersoons_moeder" = "RINPERSOONS", 
-                            "rinpersoon_moeder" = "RINPERSOON"),
+# add parents generation to cohort
+cohort_dat <- cohort_dat %>% 
+  left_join(gba_dat,
+            by = c("RINPERSOONpa" = "RINPERSOON", "RINPERSOONSpa" = "RINPERSOONS"), 
+            suffix = c("", "_pa")) %>%
+  left_join(gba_dat,
+            by = c("RINPERSOONMa" = "RINPERSOON", "RINPERSOONSMa" = "RINPERSOONS"),
             suffix = c("", "_ma"))
 
 
-# replace child generation, birth country, and origin to mom if missing
-cohort_dat <- cohort_dat %>%
-  mutate(across(c("GBAGENERATIE", "GBAGENERATIE_ma", "GBAHERKOMSTGROEPERING", 
-                  "GBAHERKOMSTGROEPERING_ma", "GBAGEBOORTELAND", 
-                  "GBAGEBOORTELAND_ma"), as.character)) %>% 
-  mutate(
-    GBAGENERATIE = ifelse(is.na(GBAGENERATIE), GBAGENERATIE_ma, GBAGENERATIE),
-    GBAHERKOMSTGROEPERING = ifelse(is.na(GBAHERKOMSTGROEPERING), 
-                                   GBAHERKOMSTGROEPERING_ma, GBAHERKOMSTGROEPERING),
-    GBAGEBOORTELAND = ifelse(is.na(GBAGEBOORTELAND), GBAGEBOORTELAND_ma, GBAGEBOORTELAND)
-  )
 
-
-# replace autochtoon to third generation if mom was second generation  (2) 
+# replace autochtoon to third generation if one of the parents were second generation  (2) 
 # and the child is native (0)
 cohort_dat <- 
   cohort_dat %>%
+  mutate(across(c("GBAGENERATIE", "GBAGENERATIE_pa", "GBAGENERATIE_ma"), as.character)) %>% 
   mutate(
     GBAGENERATIE_third = as.character(GBAGENERATIE),
     GBAGENERATIE_third = ifelse(
-      GBAGENERATIE == "autochtoon" & GBAGENERATIE_ma == "tweede generatie allochtoon" &
-        !is.na(GBAGENERATIE_ma), 
+      GBAGENERATIE == "autochtoon" & GBAGENERATIE_ma == "tweede generatie allochtoon" & !is.na(GBAGENERATIE_ma), 
+      "derde generatie allochtoon", 
+      GBAGENERATIE_third
+    ),
+    GBAGENERATIE_third = ifelse(
+      GBAGENERATIE == "autochtoon" & GBAGENERATIE_pa == "tweede generatie allochtoon" & !is.na(GBAGENERATIE_pa), 
       "derde generatie allochtoon", 
       GBAGENERATIE_third
     )
@@ -415,15 +538,23 @@ cohort_dat <-
 cohort_dat <- 
   cohort_dat %>%
   mutate(
+    across(c(GBAHERKOMSTGROEPERING, GBAHERKOMSTGROEPERING_pa, GBAHERKOMSTGROEPERING_ma), 
+           as.character)
+  ) %>%
+  mutate(
     # third generation child gets mom's origin
     GBAHERKOMSTGROEPERING_third = ifelse(
-      GBAGENERATIE_third == "derde generatie allochtoon" & 
-        !is.na(GBAHERKOMSTGROEPERING_ma),
+      GBAGENERATIE_third == "derde generatie allochtoon" & !is.na(GBAHERKOMSTGROEPERING_ma),
       GBAHERKOMSTGROEPERING_ma, 
       GBAHERKOMSTGROEPERING
+    ),
+    # except when mom is not second generation, then dad's origin
+    GBAHERKOMSTGROEPERING_third = ifelse(
+      GBAGENERATIE_third == "derde generatie allochtoon" & (GBAGENERATIE_ma != "tweede generatie allochtoon" | is.na(GBAGENERATIE_ma)),
+      GBAHERKOMSTGROEPERING_pa, 
+      GBAHERKOMSTGROEPERING_third
     )
   )
-
 
 #### MIGRATION BACKGROUND ####
 
@@ -442,8 +573,8 @@ cohort_dat <-
 # remove unnecessary outcomes
 cohort_dat <- 
   cohort_dat %>%
-  select(-c(GBAGEBOORTELAND, GBAHERKOMSTGROEPERING, GBAGENERATIE, 
-            GBAGEBOORTELAND_ma, GBAHERKOMSTGROEPERING_ma, GBAGENERATIE_ma, 
+  select(-c(GBAHERKOMSTGROEPERING_pa, GBAGENERATIE_pa, GBAHERKOMSTGROEPERING_ma, 
+            GBAGENERATIE_ma, GBAHERKOMSTGROEPERING, GBAGENERATIE, 
             GBAGENERATIE_third, GBAHERKOMSTGROEPERING_third))
 
 
@@ -460,14 +591,12 @@ rm(gba_dat)
 
 #### TYPE HOUSEHOLDS ####
 
-
 # import household  data
 household_dat <-
   read_sav(file.path(loc$data_folder, loc$household_data),
            col_select = c("RINPERSOONS", "RINPERSOON", "DATUMAANVANGHH",
                           "DATUMEINDEHH", "TYPHH")) %>%
-  filter(RINPERSOON %in% cohort_dat$RINPERSOON |
-         RINPERSOON %in% cohort_dat$rinpersoon_moeder) %>%
+  filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>%
   mutate(
     RINPERSOONS = as_factor(RINPERSOONS, levels = "value"),
     DATUMAANVANGHH = as.numeric(DATUMAANVANGHH),
@@ -480,57 +609,24 @@ household_dat <-
     DATUMEINDEHH = ymd(DATUMEINDEHH)
   ) 
 
-  
+
 # keep the first known record that we observe for the child
-  hh_tab_child <- 
-    household_dat %>% 
-    filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>%
-    group_by(RINPERSOONS, RINPERSOON) %>% 
-    summarize(TYPHH = TYPHH[1])  
-  
-
-# create child type household variable 
-hh_tab_child <- 
-    hh_tab_child %>%
-    mutate(type_hh = ifelse(TYPHH %in% "6", "single parent", "other"),
-           type_hh = ifelse(TYPHH %in% c("2", "3", "4", "5"), "two parents", type_hh)) %>%
-    select(-TYPHH)
-
-cohort_dat <- 
-  cohort_dat %>%
-  left_join(hh_tab_child, by = c("RINPERSOONS", "RINPERSOON"))
-
-
-# type household for stillbirths, use type household of mothers
-hh_tab_mom <- 
-  household_dat %>% 
-  left_join(cohort_dat %>% select(rinpersoons_moeder, rinpersoon_moeder, datumkind), 
-            by = c("RINPERSOONS" = "rinpersoons_moeder", 
-                   "RINPERSOON" = "rinpersoon_moeder")) %>%
-  filter(datumkind %within% interval(DATUMAANVANGHH, DATUMEINDEHH)) %>%
+hh_tab <- 
+  household_dat %>%
   group_by(RINPERSOONS, RINPERSOON) %>% 
-  summarize(TYPHH = TYPHH[1])  
+  filter(row_number() == 1)
 
-# create child type household variable 
-hh_tab_mom <- 
-  hh_tab_mom %>%
+hh_tab <- 
+  hh_tab %>%
   mutate(type_hh = ifelse(TYPHH %in% "6", "single parent", "other"),
          type_hh = ifelse(TYPHH %in% c("2", "3", "4", "5"), "two parents", type_hh)) %>%
-  select(-TYPHH)
+  select(-c(TYPHH, DATUMAANVANGHH, DATUMEINDEHH))
 
 
-cohort_dat <- cohort_dat %>%
-  left_join(hh_tab_mom,
-            by = c("rinpersoons_moeder" = "RINPERSOONS", 
-                   "rinpersoon_moeder" = "RINPERSOON"), 
-            suffix = c("", "_ma")) 
-
-
-# replace type household  if NA with mom type household
 cohort_dat <- 
   cohort_dat %>%
-  mutate(type_hh = ifelse(is.na(type_hh), type_hh_ma, type_hh)) %>%
-  select(-type_hh_ma)
+  left_join(hh_tab, by = c("RINPERSOONS", "RINPERSOON"))
+
 
 # convert NA to other
 cohort_dat <- 
@@ -615,27 +711,44 @@ parents_education <-
 # determine parents education of child at a specific age
 cohort_dat <- 
   cohort_dat %>%
-  mutate(year = as.numeric(format(datumkind, "%Y")) + cfg$childhood_home_age)
+  mutate(year = as.numeric(format(birthdate, "%Y")) + cfg$childhood_home_age)
 
 
 # add parents education to cohort
 cohort_dat <- 
   cohort_dat %>% 
   left_join(parents_education,
-            by = c("rinpersoons_moeder" = "RINPERSOONS", "rinpersoon_moeder" = "RINPERSOON", "year")) %>%
-  rename(parents_education = parents_edu) %>%
+            by = c("RINPERSOONpa" = "RINPERSOON", "RINPERSOONSpa" = "RINPERSOONS", "year")) %>%
+  rename(parents_edu_pa = parents_edu) %>%
+  left_join(parents_education,
+            by = c("RINPERSOONMa" = "RINPERSOON", "RINPERSOONSMa" = "RINPERSOONS", "year")) %>%
+  rename(parents_edu_ma = parents_edu) %>%
   select(-year)
 
 # convert NA to other category
 cohort_dat <-
   cohort_dat %>%
   mutate(
-    parents_education = ifelse(is.na(parents_education), "other", parents_education)
+    parents_edu_pa = ifelse(is.na(parents_edu_pa), "other", parents_edu_pa),
+    parents_edu_ma = ifelse(is.na(parents_edu_ma), "other", parents_edu_ma)
   )
+
+
+# create parents education
+cohort_dat <- 
+  cohort_dat %>%
+  mutate(
+    parents_education = ifelse(parents_edu_pa == "hbo" | parents_edu_ma == "hbo",
+                               "hbo", "other"),
+    parents_education = ifelse(parents_edu_pa == "wo" | parents_edu_ma == "wo",
+                               "wo", parents_education)
+  ) %>%
+  select(-c(parents_edu_pa, parents_edu_ma))
+
 
 rm(parents_education, edu_link)
 
 
+
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "02_predictors.rds"))
-

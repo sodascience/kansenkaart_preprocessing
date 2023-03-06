@@ -4,7 +4,8 @@
 #   - Selecting the cohort based on filtering criteria.
 #   - Writing `scratch/01_cohort.rds`.
 #
-# (c) ODISSEI Social Data Science team 2021
+# (c) ODISSEI Social Data Science team 2022
+
 
 
 #### PACKAGES ####
@@ -58,11 +59,19 @@ for (year in seq(format(dmy(cfg$child_birth_date_min), "%Y"),
   
 }
 
+# change geslacht column
+cohort_dat <- 
+  cohort_dat %>%
+  rename(geslacht = geslachtkind) %>%
+  mutate(geslacht = fct_recode(as.factor(as.character(geslacht)), "Mannen" = "jongen", "Vrouwen" = "meisje")) 
+
+
 # remove gestational age below given days
 cohort_dat <- cohort_dat %>%
   unique() %>%
   filter(!(amddd < cfg$cut_off_days_min),
          !(amddd > cfg$cut_off_days_max))
+
 
 
 #### DO AND DOODOORZTAB ####
@@ -189,7 +198,7 @@ death_dat <- rbind(death_dat, dood_dat) %>%
 rm(dood_dat, gba_dat)
 
 
-cohort_dat <- left_join(cohort_dat, death_dat) 
+cohort_dat <- left_join(cohort_dat, death_dat)
 
 # free up memory
 rm(death_dat)
@@ -200,13 +209,15 @@ cohort_dat <- cohort_dat %>%
   mutate(
     datumkind = ymd(datumkind),
     diff_days = as.numeric(difftime(date_of_death, datumkind, units = "days"))
-  ) 
+  ) %>%
+  select(-date_of_death)
 
 
 # filter out children with too old or too young mothers
 cohort_dat <- cohort_dat %>%
   filter(leeftijdmoeder >= cfg$parent_min_age &
            leeftijdmoeder <= cfg$parent_max_age)
+
 
 
 #### REGION LINK ####
@@ -221,17 +232,16 @@ adres_tab  <- read_sav(adres_path) %>%
   )
 
 
-# take the address registration to be their childhood home at date of birth
+# keep the earliest known address that we observe for the child
 home_tab <- 
-  adres_tab %>% 
-  inner_join(cohort_dat %>% select(c(RINPERSOONS, RINPERSOON, datumkind)),
-             by = c("RINPERSOONS", "RINPERSOON")) %>%
-  filter(datumkind %within% interval(GBADATUMAANVANGADRESHOUDING, GBADATUMEINDEADRESHOUDING)) %>%
+  adres_tab %>%
+  filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>%
+  arrange(RINPERSOONS, RINPERSOON) %>%
   group_by(RINPERSOONS, RINPERSOON) %>% 
-  summarise(childhood_home = RINOBJECTNUMMER[1],
+  summarize(childhood_home = RINOBJECTNUMMER[1],
             type_childhood_home = SOORTOBJECTNUMMER[1])
-  
 
+# keep address of mom at date of birth for stillbirths
 mom_home_tab <- 
   adres_tab %>% 
   inner_join(cohort_dat %>% select(c(rinpersoons_moeder, rinpersoon_moeder, datumkind)), 
@@ -281,7 +291,8 @@ vslpc_tab  <- read_sav(vslpc_path) %>%
     DATUMAANVPOSTCODENUMADRES = ymd(DATUMAANVPOSTCODENUMADRES),
     DATUMEINDPOSTCODENUMADRES = ymd(DATUMEINDPOSTCODENUMADRES),
     POSTCODENUM = ifelse(POSTCODENUM == "----", NA, POSTCODENUM)
-  )
+  ) %>%
+  filter(!is.na(POSTCODENUM))
 
 
 # only consider postal codes valid on target_date and create postcode-3 level
@@ -316,15 +327,26 @@ cohort_dat <- inner_join(cohort_dat, vslgwb_tab,
 
 # add corop regions
 corop_tab  <- read_excel(loc$corop_data) %>%
-  select("gemeente_code" = paste0("GM", year(dmy(cfg$gwb_target_date))), 
-         "corop_code" = paste0("COROP", year(dmy(cfg$gwb_target_date)))) %>%
+  select("gemeente_code" = paste0("GM", year(dmy(cfg$corop_target_date))), 
+         "corop_code" = paste0("COROP", year(dmy(cfg$corop_target_date)))) %>%
   unique()
 
-cohort_dat <- inner_join(cohort_dat, corop_tab, by = "gemeente_code")
+cohort_dat <- left_join(cohort_dat, corop_tab, by = "gemeente_code") %>%
+  select(-c(type_childhood_home, childhood_home))
 
 # free up memory
 rm(vslpc_tab, vslgwb_tab, corop_tab)
 
 
+# mutate factor regions
+cohort_dat <-
+  cohort_dat %>%
+  mutate(across(c("postcode3", "postcode4", "gemeente_code",
+                  "wijk_code", "buurt_code", "corop_code"), as.factor))
+
+
+
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "01_cohort.rds"))
+
+
