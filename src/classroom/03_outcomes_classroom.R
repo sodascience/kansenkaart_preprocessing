@@ -3,7 +3,7 @@
 # 3. Outcome creation.
 #   - Adding classroom outcomes to the cohort.
 #
-# (c) ODISSEI Social Data Science team 2022
+# (c) ODISSEI Social Data Science team 2023
 
 
 
@@ -486,7 +486,7 @@ cohort_dat <-
   filter(continuous_living) %>% 
   select(-continuous_living)
 
-rm(adres_tab, days_tab, child_adres_date)
+rm(adres_dat, adres_tab, days_tab, child_adres_date)
 
 
 

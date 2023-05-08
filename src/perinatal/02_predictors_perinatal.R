@@ -581,7 +581,7 @@ cohort_dat <-
 # create variable for individuals with a migration background
 cohort_dat <-
   cohort_dat %>%
-  mutate(has_migration_background = ifelse(migration_third == "Nederland", 0, 1))
+  mutate(has_migration = ifelse(migration_third == "Nederland", 0, 1))
 
 
 

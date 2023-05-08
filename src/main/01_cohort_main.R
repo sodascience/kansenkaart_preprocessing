@@ -6,7 +6,7 @@
 #   - Adding postal code / region information to the cohort.
 #   - Writing `scratch/01_cohort.rds`.
 #
-# (c) ODISSEI Social Data Science team 2022
+# (c) ODISSEI Social Data Science team 2023
 
 
 
@@ -213,15 +213,21 @@ cohort_dat <- inner_join(cohort_dat, vslpc_tab,
 vslgwb_path <- file.path(loc$data_folder, loc$vslgwb_data) 
 vslgwb_tab  <- read_sav(vslgwb_path) %>%
   mutate(SOORTOBJECTNUMMER = as_factor(SOORTOBJECTNUMMER, levels = "values"))
+  
 
-# select region/neighbourhood from the target date
+# select region/neighborhood from the target date
 vslgwb_tab <- 
   vslgwb_tab %>% 
   select("type_childhood_home" = "SOORTOBJECTNUMMER", 
          "childhood_home"      = "RINOBJECTNUMMER", 
          "gemeente_code"       = paste0("gem", year(dmy(cfg$gwb_target_date))), 
          "wijk_code"           = paste0("wc", year(dmy(cfg$gwb_target_date))), 
-         "buurt_code"          = paste0("bc", year(dmy(cfg$gwb_target_date))))
+         "buurt_code"          = paste0("bc", year(dmy(cfg$gwb_target_date)))
+         ) %>%
+  mutate(gemeente_code = ifelse(gemeente_code == "----", NA, gemeente_code)
+         ) %>%
+  filter(!is.na(gemeente_code))
+
 
 cohort_dat <- inner_join(cohort_dat, vslgwb_tab)
 

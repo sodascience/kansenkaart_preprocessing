@@ -4,9 +4,10 @@
 #   - Adding (socio)economic outcomes to the cohort.
 #   - Adding education outcomes to the cohort.
 #   - Adding health outcomes to the cohort.
+#   - Adding housing outcomes to the cohort.
 #   - Writing `scratch/03_outcomes.rds`.
 #
-# (c) ODISSEI Social Data Science team 2022
+# (c) ODISSEI Social Data Science team 2023
 
 
 
@@ -39,6 +40,184 @@ cpi_tab <- cpi_tab %>%
     cpi = cpi / cpi_tab %>% filter(year == cfg$cpi_base_year) %>% pull(cpi) * 100)
 
 
+### CHILD HOUSEHOLD INCOME  ####
+
+
+# get income data from each requested year into single data frame
+get_ihi_filename <- function(year) {
+  # function to get latest version of specified year
+  fl <- list.files(
+    path = file.path(loc$data_folder, "InkomenBestedingen/INTEGRAAL HUISHOUDENS INKOMEN/", year),
+    pattern = paste0("HUISHBVRINK", year),
+    full.names = TRUE
+  )
+  # return only the latest version
+  sort(fl, decreasing = TRUE)[1]
+}
+
+get_inha_filename <- function(year) {
+  # function to get latest version of specified year
+  fl <- list.files(
+    path = file.path(loc$data_folder, "InkomenBestedingen/INHATAB/"),
+    # pattern = paste0("INHA", year, "TABV[0-9]+\\(?i).sav"),
+    pattern = paste0("INHA", year),
+    full.names = TRUE
+  )
+  # return only the latest version
+  sort(fl, decreasing = TRUE)[1]
+}
+
+get_koppelpersoon_filename <- function(year) {
+  # function to get latest version of specified year
+  fl <- list.files(
+    path = file.path(loc$data_folder, "InkomenBestedingen/VEHTAB"),
+    pattern = paste0("KOPPELPERSOONHUISHOUDEN", year),
+    full.names = TRUE
+  )
+  # return only the latest version
+  sort(fl, decreasing = TRUE)[1]
+}
+
+get_koppeltabel_filename <- function(year) {
+  # function to get latest version of specified year
+  fl <- list.files(
+    path = file.path(loc$data_folder, "InkomenBestedingen/VEHTAB"),
+    pattern = paste0("KOPPELTABEL", year),
+    full.names = TRUE
+  )
+  # return only the latest version
+  sort(fl, decreasing = TRUE)[1]
+}
+
+
+income_household <- tibble(RINPERSOONS = factor(), RINPERSOON = character(),
+                           household_income = double(), year = integer())
+for (year in seq(as.integer(cfg$child_income_year_min), as.integer(cfg$child_income_year_max))) {
+  
+  if (year <= 2010) {
+    
+    # load koppel data person to household
+    koppel_hh <- read_sav(get_koppeltabel_filename(year)) %>%
+      # select only incomes of children
+      filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>%
+      mutate(RINPERSOONSHKW = as_factor(RINPERSOONSHKW, levels = "value"),
+             RINPERSOONS = as_factor(RINPERSOONS, levels = "value"))
+    
+  } else {
+    
+    # load koppel data person to household
+    koppel_hh <- read_sav(get_koppelpersoon_filename(year)) %>%
+      # select only incomes of children
+      filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>%
+      mutate(RINPERSOONSHKW = as_factor(RINPERSOONSHKW, levels = "value"),
+             RINPERSOONS = as_factor(RINPERSOONS, levels = "value"))
+  }
+  
+  if (year < 2011) {
+    # use tab
+    income_children <-
+      # read file from disk
+      read_sav(get_ihi_filename(year),
+               col_select = c("RINPERSOONSKERN", "RINPERSOONKERN", "BVRBRUTINKH")) %>%
+      rename(household_income = BVRBRUTINKH,
+             RINPERSOONSHKW = RINPERSOONSKERN,
+             RINPERSOONHKW = RINPERSOONKERN) %>%
+      mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value"),
+             year = year)
+    
+  } else {
+    # use tab
+    income_children <-
+      # read file from disk
+      read_sav(get_inha_filename(year),
+               col_select = c("RINPERSOONSHKW", "RINPERSOONHKW", "INHBRUTINKH")) %>%
+      rename(household_income = INHBRUTINKH) %>%
+      mutate(RINPERSOONSHKW = as_factor(RINPERSOONSHKW, levels = "value"),
+             year = year)
+    
+  }
+  
+  income_children <- inner_join(income_children, koppel_hh,
+                                by = c("RINPERSOONSHKW", "RINPERSOONHKW")) %>%
+    select(-c(RINPERSOONSHKW, RINPERSOONHKW))
+  
+  income_household <- bind_rows(income_household, income_children) %>%
+    # select only incomes of children
+    filter(RINPERSOON %in% cohort_dat$RINPERSOON)
+  
+}
+rm(income_children, koppel_hh)
+
+# remove NA incomes
+income_household <-
+  income_household %>%
+  mutate(household_income = ifelse(household_income == 999999999 | household_income == 9999999999, NA, household_income))
+
+# deflate
+income_household <-
+  income_household %>%
+  left_join(cpi_tab %>% select(year, cpi), by = "year") %>%
+  mutate(household_income = household_income / (cpi / 100)) %>%
+  select(-cpi)
+
+
+# add year variable at which the child is a specific age
+# to compute the mean of child income in a period.
+income_household <-
+  income_household %>%
+  rename(income_year = year) %>%
+  arrange(RINPERSOON) %>%
+  left_join(cohort_dat %>% select(RINPERSOONS, RINPERSOON, year),
+            by = c("RINPERSOONS", "RINPERSOON"))
+
+
+# compute the mean between the range year and the previous year
+income_household <-
+  income_household %>%
+  mutate(year = ifelse(income_year == (year - 1), (year - 1), year),
+         year = ifelse(income_year  == year, year, NA)) %>%
+  filter(!is.na(year)) %>%
+  select(-year)
+
+
+# compute mean
+income_household <-
+  income_household %>%
+  group_by(RINPERSOONS, RINPERSOON) %>%
+  summarize(income_n = sum(!is.na(household_income)),
+            household_income = mean(household_income, na.rm = TRUE))
+
+# table of the number of years the mean income is based on
+print(table(`income years` = income_household$income_n))
+
+# add to data
+cohort_dat <- left_join(cohort_dat, income_household %>% select(-income_n),
+                        by = c("RINPERSOONS", "RINPERSOON"))
+
+# free up memory
+rm(income_household)
+
+
+# if income is negative then household_income becomes NA
+cohort_dat <-
+  cohort_dat %>%
+  mutate(household_income = ifelse(household_income < 0, NA, household_income)) %>%
+  # remove income if income is NA or nan
+  filter(!is.na(household_income) | !is.nan(household_income))
+
+
+# compute income transformations
+cohort_dat <- 
+  cohort_dat %>%
+  group_by(birth_year) %>%
+  mutate(
+    household_income_rank = rank(household_income, ties.method = "average"),
+    household_income_perc = household_income_rank / max(household_income_rank)
+  ) %>%
+  select(-c(household_income_rank)) %>%
+  ungroup()
+
+
 
 #### CHILD INCOME ####
 
@@ -47,7 +226,7 @@ get_ipi_filename <- function(year) {
   # function to get latest version of specified year
   fl <- list.files(
     path = file.path(loc$data_folder, "InkomenBestedingen/INTEGRAAL PERSOONLIJK INKOMEN/", year),
-    pattern = paste0("PERSOONINK", year, "TABV[0-9]+\\.sav"), 
+    pattern = paste0("PERSOONINK", year), 
     full.names = TRUE
   )
   # return only the latest version
@@ -58,7 +237,7 @@ get_inpa_filename <- function(year) {
   # function to get latest version of specified year
   fl <- list.files(
     path = file.path(loc$data_folder, "InkomenBestedingen/INPATAB/"),
-    pattern = paste0("INPA", year, "TABV[0-9]+\\.sav"), 
+    pattern = paste0("INPA", year), 
     full.names = TRUE
   )
   # return only the latest version
@@ -154,6 +333,22 @@ cohort_dat <-
   mutate(income = ifelse(income < 0, NA, income)) %>%
 # remove income if income is NA 
   filter(!is.na(income))
+
+
+# compute income transformations
+cohort_dat <- 
+  cohort_dat %>%
+  group_by(birth_year) %>%
+  mutate(
+    income_rank = rank(income, ties.method = "average"),
+    income_perc = income_rank / max(income_rank)
+  ) %>%
+  select(-c(income_rank)) %>%
+  ungroup()
+
+
+
+
 
 
 
@@ -400,7 +595,7 @@ cohort_dat <-
 get_health_filename <- function(year) {
   fl <- list.files(
     path = file.path(loc$data_folder, "GezondheidWelzijn/ZVWZORGKOSTENTAB", year),
-    pattern = paste0("ZVWZORGKOSTEN", year, "TABV[0-9]+\\.sav"), 
+    pattern = paste0("ZVWZORGKOSTEN", year), 
     full.names = TRUE
   )
   # return only the latest version
@@ -433,6 +628,7 @@ for (year in seq(as.integer(cfg$child_outcome_year_min), as.integer(cfg$child_ou
       mutate(across(.cols = starts_with("ZVWK"),
                     .fns = ~ ifelse(is.na(.x), 0, .x))
       ) %>%
+      ungroup() %>%
       mutate(pharma             = ifelse(ZVWKFARMACIE > 0, 1, 0),
              basic_mhc          = ifelse((ZVWKGENBASGGZ > 0 | ZVWKSPECGGZ > 0), 1, 0),
              specialist_mhc     = ifelse(ZVWKSPECGGZ > 0, 1, 0),
@@ -440,7 +636,7 @@ for (year in seq(as.integer(cfg$child_outcome_year_min), as.integer(cfg$child_ou
              total_health_costs = rowSums(across(c(ZVWKHUISARTS, ZVWKMULTIDISC, ZVWKFARMACIE, 
                                                    ZVWKMONDZORG, ZVWKZIEKENHUIS, ZVWKPARAMEDISCH, 
                                                    ZVWKHULPMIDDEL, ZVWKZIEKENVERVOER, ZVWKBUITENLAND, 
-                                                   ZVWKOVERIG, ZVWKGERIATRISCH, ZVWKWYKVERPLEGING), na.rm = TRUE)),
+                                                   ZVWKOVERIG, ZVWKGERIATRISCH, ZVWKWYKVERPLEGING))),
              total_health_costs = total_health_costs - (NOPZVWKHUISARTSINSCHRIJF + ZVWKGEBOORTEZORG)
       ) %>%
       select(c("RINPERSOONS", "RINPERSOON", "pharma", "basic_mhc", "specialist_mhc",
@@ -448,7 +644,8 @@ for (year in seq(as.integer(cfg$child_outcome_year_min), as.integer(cfg$child_ou
       bind_rows(health_tab, .)
     
   } else if (year >= 2018) {
-    health_tab <- read_sav(get_health_filename(year),
+   
+     health_tab <- read_sav(get_health_filename(year),
                            col_select = c("RINPERSOONS", "RINPERSOON", "ZVWKHUISARTS", "ZVWKMULTIDISC",
                                           "ZVWKFARMACIE", "ZVWKMONDZORG", "ZVWKZIEKENHUIS", 
                                           "ZVWKEERSTELIJNSVERBLIJF", "ZVWKPARAMEDISCH", "ZVWKHULPMIDDEL", 
@@ -466,15 +663,17 @@ for (year in seq(as.integer(cfg$child_outcome_year_min), as.integer(cfg$child_ou
       mutate(across(.cols = starts_with("ZVWK"),
                     .fns = ~ ifelse(is.na(.x), 0, .x))
       ) %>%
-      mutate(pharma             = ifelse(ZVWKFARMACIE > 0, 1, 0),
+      ungroup() %>%
+      mutate(
+        pharma             = ifelse(ZVWKFARMACIE > 0, 1, 0),
              basic_mhc          = ifelse((ZVWKGENBASGGZ > 0 | ZVWKSPECGGZ > 0), 1, 0),
              specialist_mhc     = ifelse(ZVWKSPECGGZ > 0, 1, 0),
-             hospital           = ifelse(ZVWKZIEKENHUIS > 0, 1, 0), 
+             hospital           = ifelse(ZVWKZIEKENHUIS > 0, 1, 0),
              total_health_costs = rowSums(across(c(ZVWKHUISARTS, ZVWKMULTIDISC, ZVWKFARMACIE, 
                                         ZVWKMONDZORG, ZVWKZIEKENHUIS, ZVWKEERSTELIJNSVERBLIJF, 
                                         ZVWKPARAMEDISCH, ZVWKHULPMIDDEL, ZVWKZIEKENVERVOER, 
                                         ZVWKBUITENLAND, ZVWKOVERIG, ZVWKGERIATRISCH, 
-                                        ZVWKWYKVERPLEGING), na.rm = TRUE)), 
+                                        ZVWKWYKVERPLEGING))), 
              total_health_costs = (total_health_costs - (ZVWKGEBOORTEZORG + NOPZVWKHUISARTSINSCHRIJF))
       ) %>%
       select(c("RINPERSOONS", "RINPERSOON", "pharma", "basic_mhc", "specialist_mhc",
@@ -511,35 +710,13 @@ get_veh_filename <- function(year) {
   # function to get latest version of specified year
   fl <- list.files(
     path = file.path(loc$data_folder, "InkomenBestedingen/VEHTAB"),
-    pattern = paste0("VEH", year, "TAB"),
+    pattern = paste0("VEH", year),
     full.names = TRUE
   )
   # return only the latest version
   sort(fl, decreasing = TRUE)[1]
 }
 
-
-get_koppelpersoon_filename <- function(year) {
-  # function to get latest version of specified year
-  fl <- list.files(
-    path = file.path(loc$data_folder, "InkomenBestedingen/VEHTAB"),
-    pattern = paste0("KOPPELPERSOONHUISHOUDEN", year),
-    full.names = TRUE
-  )
-  # return only the latest version
-  sort(fl, decreasing = TRUE)[1]
-}
-
-get_koppeltabel_filename <- function(year) {
-  # function to get latest version of specified year
-  fl <- list.files(
-    path = file.path(loc$data_folder, "InkomenBestedingen/VEHTAB"),
-    pattern = paste0("KOPPELTABEL", year),
-    full.names = TRUE
-  )
-  # return only the latest version
-  sort(fl, decreasing = TRUE)[1]
-}
 
 
 wealth_child <- tibble(RINPERSOONS = factor(), RINPERSOON = character(),
@@ -609,9 +786,10 @@ rm(wealth_child)
 # create debt and home value outcome
 cohort_dat <- 
   cohort_dat %>%
-  mutate(debt = ifelse(wealth >= 0, 0, abs(wealth)),
-         debt = ifelse(is.na(wealth), NA, debt), 
-         home_value = wealth - wealth_no_home)
+  mutate(
+    debt        = ifelse(wealth >= 0, 0, abs(wealth)),
+    debt        = ifelse(is.na(wealth), NA, debt), 
+    home_wealth = wealth - wealth_no_home)
 
 
 #### PROPERTY BOUGHT OR RENT ####
@@ -645,7 +823,7 @@ get_property_filename <- function(year) {
   # function to get latest version of specified year
   fl <- list.files(
     path = file.path(loc$data_folder, "BouwenWonen/EIGENDOMTAB"),
-    pattern = paste0("EIGENDOM", year, "TABV[0-9]+\\.sav"), 
+    pattern = paste0("EIGENDOM", year), 
     full.names = TRUE
   )
   # return only the latest version
@@ -694,18 +872,18 @@ get_schtab_filename <- function(year) {
     # function to get latest version of specified year
     fl <- list.files(
       path = file.path(loc$data_folder, "InkomenBestedingen/SCHTAB", year),
-      pattern = "(?i).sav",
+      pattern = "SCH", year,
       full.names = TRUE
     )
     # return only the latest version
     sort(fl, decreasing = TRUE)[1]
 }
 
-gifts_parents <- tibble(RINPERSOONSONTVANGER = factor(), RINPERSOONONTVANGER = character(), 
+gifts_tab <- tibble(RINPERSOONSONTVANGER = factor(), RINPERSOONONTVANGER = character(), 
                         SCHBRUTSCHK = double(), year = integer())
 for (year in seq(as.integer(cfg$gifts_dat_start), as.integer(cfg$gifts_dat_end))) {
  
-  gifts_parents <- read_sav(get_schtab_filename(year), 
+  gifts_tab <- read_sav(get_schtab_filename(year), 
                             col_select = c("RINPERSOONSONTVANGER", "RINPERSOONONTVANGER", 
                                            "SCHTYPEVRIJ", "SCHBRUTSCHK")) %>%
     mutate(RINPERSOONSONTVANGER = as_factor(RINPERSOONSONTVANGER, levels = "values"), 
@@ -717,13 +895,13 @@ for (year in seq(as.integer(cfg$gifts_dat_start), as.integer(cfg$gifts_dat_end))
            ) %>%
     select(-SCHTYPEVRIJ) %>%
     # add to tibble
-    bind_rows(gifts_parents, .)
+    bind_rows(gifts_tab, .)
 }
 
 
-gifts_parents <-
+gifts_tab <-
   # add birth year to data
-  left_join(gifts_parents, cohort_dat %>% select(RINPERSOONS, RINPERSOON, birth_year), 
+  left_join(gifts_tab, cohort_dat %>% select(RINPERSOONS, RINPERSOON, birth_year), 
             by = c("RINPERSOONSONTVANGER" = "RINPERSOONS", 
                    "RINPERSOONONTVANGER" = "RINPERSOON")
             ) %>%
@@ -737,26 +915,26 @@ gifts_parents <-
 
 
 # deflate 
-gifts_parents <-
-  gifts_parents %>%
+gifts_tab <-
+  gifts_tab %>%
   left_join(cpi_tab %>% select(year, cpi), by = "year") %>%
   mutate(SCHBRUTSCHK = SCHBRUTSCHK / (cpi / 100)) %>%
   select(-cpi)
 
 
 # sum all gifts received
-gifts_parents <-
-  gifts_parents %>%
+gifts_tab <-
+  gifts_tab %>%
   group_by(RINPERSOONSONTVANGER, RINPERSOONONTVANGER) %>%
   summarize(sum_gifts = sum(SCHBRUTSCHK))
 
 
 cohort_dat <-
-  left_join(cohort_dat, gifts_parents,
+  left_join(cohort_dat, gifts_tab,
             by = c("RINPERSOONS" = "RINPERSOONSONTVANGER",
                    "RINPERSOON" = "RINPERSOONONTVANGER"))
 
-rm(gifts_parents)
+rm(gifts_tab)
 
 
 # create binary gifts outcome
@@ -839,149 +1017,6 @@ cohort_dat <-
 
 
 
-### CHILD HOUSEHOLD INCOME  ####
-
-
-# get income data from each requested year into single data frame
-get_ihi_filename <- function(year) {
-  # function to get latest version of specified year
-  fl <- list.files(
-    path = file.path(loc$data_folder, "InkomenBestedingen/INTEGRAAL HUISHOUDENS INKOMEN/", year),
-    pattern = paste0("HUISHBVRINK", year, "TABV[0-9]+\\.sav"),
-    full.names = TRUE
-  )
-  # return only the latest version
-  sort(fl, decreasing = TRUE)[1]
-}
-
-get_inha_filename <- function(year) {
-  # function to get latest version of specified year
-  fl <- list.files(
-    path = file.path(loc$data_folder, "InkomenBestedingen/INHATAB/"),
-    pattern = paste0("INHA", year, "TABV[0-9]+\\.sav"),
-    full.names = TRUE
-  )
-  # return only the latest version
-  sort(fl, decreasing = TRUE)[1]
-}
-
-
-income_household <- tibble(RINPERSOONS = factor(), RINPERSOON = character(),
-                           household_income = double(), year = integer())
-for (year in seq(as.integer(cfg$child_income_year_min), as.integer(cfg$child_income_year_max))) {
-
-  if (year <= 2010) {
-
-    # load koppel data person to household
-    koppel_hh <- read_sav(get_koppeltabel_filename(year)) %>%
-      # select only incomes of children
-      filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>%
-      mutate(RINPERSOONSHKW = as_factor(RINPERSOONSHKW, levels = "value"),
-             RINPERSOONS = as_factor(RINPERSOONS, levels = "value"))
-
-  } else {
-
-    # load koppel data person to household
-    koppel_hh <- read_sav(get_koppelpersoon_filename(year)) %>%
-      # select only incomes of children
-      filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>%
-      mutate(RINPERSOONSHKW = as_factor(RINPERSOONSHKW, levels = "value"),
-             RINPERSOONS = as_factor(RINPERSOONS, levels = "value"))
-  }
-
-  if (year < 2011) {
-    # use tab
-    income_children <-
-      # read file from disk
-      read_sav(get_ihi_filename(year),
-               col_select = c("RINPERSOONSKERN", "RINPERSOONKERN", "BVRBRUTINKH")) %>%
-      rename(household_income = BVRBRUTINKH,
-             RINPERSOONSHKW = RINPERSOONSKERN,
-             RINPERSOONHKW = RINPERSOONKERN) %>%
-      mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value"),
-             year = year)
-
-  } else {
-    # use tab
-    income_children <-
-      # read file from disk
-      read_sav(get_inha_filename(year),
-               col_select = c("RINPERSOONSHKW", "RINPERSOONHKW", "INHBRUTINKH")) %>%
-      rename(household_income = INHBRUTINKH) %>%
-      mutate(RINPERSOONSHKW = as_factor(RINPERSOONSHKW, levels = "value"),
-             year = year)
-
-  }
-
-  income_children <- inner_join(income_children, koppel_hh,
-                                by = c("RINPERSOONSHKW", "RINPERSOONHKW")) %>%
-    select(-c(RINPERSOONSHKW, RINPERSOONHKW))
-
-  income_household <- bind_rows(income_household, income_children) %>%
-    # select only incomes of children
-    filter(RINPERSOON %in% cohort_dat$RINPERSOON)
-
-}
-rm(income_children, koppel_hh)
-
-# remove NA incomes
-income_household <-
-  income_household %>%
-  mutate(household_income = ifelse(household_income == 999999999 | household_income == 9999999999, NA, household_income))
-
-# deflate
-income_household <-
-  income_household %>%
-  left_join(cpi_tab %>% select(year, cpi), by = "year") %>%
-  mutate(household_income = household_income / (cpi / 100)) %>%
-  select(-cpi)
-
-
-# add year variable at which the child is a specific age
-# to compute the mean of child income in a period.
-income_household <-
-  income_household %>%
-  rename(income_year = year) %>%
-  arrange(RINPERSOON) %>%
-  left_join(cohort_dat %>% select(RINPERSOONS, RINPERSOON, year),
-            by = c("RINPERSOONS", "RINPERSOON"))
-
-
-# compute the mean between the range year and the previous year
-income_household <-
-  income_household %>%
-  mutate(year = ifelse(income_year == (year - 1), (year - 1), year),
-         year = ifelse(income_year  == year, year, NA)) %>%
-  filter(!is.na(year)) %>%
-  select(-year)
-
-
-# compute mean
-income_household <-
-  income_household %>%
-  group_by(RINPERSOONS, RINPERSOON) %>%
-  summarize(income_n = sum(!is.na(household_income)),
-            household_income = mean(household_income, na.rm = TRUE))
-
-# table of the number of years the mean income is based on
-print(table(`income years` = income_household$income_n))
-
-# add to data
-cohort_dat <- left_join(cohort_dat, income_household %>% select(-income_n),
-                        by = c("RINPERSOONS", "RINPERSOON"))
-
-# free up memory
-rm(income_household)
-
-
-# if income is negative then household_income becomes NA
-cohort_dat <-
-  cohort_dat %>%
-  mutate(household_income = ifelse(household_income < 0, NA, household_income)) %>%
-  # remove income if income is NA or nan
-  filter(!is.na(household_income) | !is.nan(household_income))
-
-
 
 #### LIVING SPACE PER HOUSEHOLD MEMBER ####
 
@@ -1059,12 +1094,11 @@ rm(woon_dat)
 
 # NUMBER OF HOUSEHOLD MEMBERS
 
-
 # function to get latest eigendom version of specified year
 get_eigendom_filename <- function(year) {
   fl <- list.files(
     path = file.path(loc$data_folder, "BouwenWonen/EIGENDOMTAB"),
-    pattern = paste0("EIGENDOM", year, "TABV[0-9]+(?i)(.sav)"), 
+    pattern = paste0("EIGENDOM", year), 
     full.names = TRUE
   )
   # return only the latest version
@@ -1094,7 +1128,8 @@ cohort_dat <- cohort_dat %>%
 
 
 # create living space per household member outcome
-cohort_dat <- cohort_dat %>%
+cohort_dat <- 
+  cohort_dat %>%
   mutate(living_space_pp = VBOOPPERVLAKTE / AantalBewoners) %>%
   select(-c(january, SOORTOBJECTNUMMER, RINOBJECTNUMMER, 
             VBOOPPERVLAKTE, AantalBewoners))
@@ -1107,13 +1142,13 @@ rm(household_members)
 #### PREFIX ####
 
 # add prefix to outcomes
-outcomes <- c("income", "hbo_attained", "wo_attained", "hourly_wage", "hrs_work_pw", 
-              "permanent_contract", "hourly_wage_max_11", "hourly_wage_max_14", 
-              "employed", "social_assistance",  "disability", "total_health_costs", 
-              "basic_mhc", "specialist_mhc", "hospital", "pharma", "debt", 
-              "wealth", "wealth_no_home", "home_value", "homeowner", 
+outcomes <- c("income", "income_perc", "hbo_attained", "wo_attained", "hourly_wage", 
+              "hrs_work_pw", "permanent_contract", "hourly_wage_max_11", 
+              "hourly_wage_max_14", "employed", "social_assistance",  "disability", 
+              "total_health_costs", "basic_mhc", "specialist_mhc", "hospital", 
+              "pharma", "debt", "wealth", "wealth_no_home", "home_wealth", "homeowner",
               "gifts_received", "teenage_birth", "household_income", 
-              "living_space_pp", "sum_gifts")
+              "household_income_perc", "living_space_pp", "sum_gifts")
 suffix <- "c30_"
 
 
@@ -1127,4 +1162,6 @@ cohort_dat <-
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
+
+
 

@@ -3,7 +3,7 @@
 # 3. Outcome creation.
 #   - Adding high school education outcomes to the cohort.
 #
-# (c) ODISSEI Social Data Science team 2022
+# (c) ODISSEI Social Data Science team 2023
 
 
 
@@ -28,6 +28,7 @@ cpi_tab <- read_excel(loc$cpi_index_data) %>%
 cpi_tab <- cpi_tab %>%
   mutate(
     cpi = cpi / cpi_tab %>% filter(year == cfg$cpi_base_year) %>% pull(cpi) * 100)
+
 
 
 #### HIGH SCHOOL ####

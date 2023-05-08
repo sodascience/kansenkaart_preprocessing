@@ -412,7 +412,7 @@ cohort_dat <-
 # create variable for individuals with a migration background
 cohort_dat <-
   cohort_dat %>%
-  mutate(has_migration_background = ifelse(migration_third == "Nederland", 0, 1))
+  mutate(has_migration = ifelse(migration_third == "Nederland", 0, 1))
 
 
 # free up memory
@@ -421,19 +421,25 @@ rm(gba_dat)
 
 #### TYPE HOUSEHOLDS ####
 
+
 # import household  data
 household_dat <-
   read_sav(file.path(loc$data_folder, loc$household_data),
            col_select = c("RINPERSOONS", "RINPERSOON", "DATUMAANVANGHH",
                           "DATUMEINDEHH", "TYPHH")) %>%
-  filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>%
+  filter(RINPERSOON %in% cohort_dat$RINPERSOON)
+
+
+
+household_dat <- 
+  household_dat %>%
   mutate(
     RINPERSOONS = as_factor(RINPERSOONS, levels = "value"),
     DATUMAANVANGHH = as.numeric(DATUMAANVANGHH),
     DATUMEINDEHH = as.numeric(DATUMEINDEHH),
     TYPHH = as_factor(TYPHH, levels = "value")
   ) %>%
-  mutate_all(na_if, "") %>%
+  # mutate_all(na_if, "") %>%
   mutate(
     DATUMAANVANGHH = ymd(DATUMAANVANGHH),
     DATUMEINDEHH = ymd(DATUMEINDEHH)
