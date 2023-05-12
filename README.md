@@ -8,9 +8,9 @@ A reproducible preprocessing pipeline for the [KansenKaart]( https://kansenkaart
 ## What is KansenKaart?
 [KansenKaart]( https://kansenkaart.nl/) is a project on intergenerational mobility across areas in the Netherlands. The goal is to show how circumstances in which Dutch individuals grew up are related to later-in-life outcomes. 
 
-We begin by measuring the average later-life outcomes (e.g., income) of children for each neighborhood, by demographic subgroups (gender and migration background), and socioeconomic status (parental income). We focus on municipalities, neighborhoods, and postal codes where children grew up, regardless of where they live later in life. We then map these geographical differences in later-life outcomes across areas within the Netherlands. The final results are now available on the interactive website [KansenKaart.nl](https://kansenkaart.nl/), which includes outcomes ranging from health, education, to economic productivity. 
+We start by measuring the average outcomes in later life, such as income, for children in each neighborhood, considering different demographic subgroups (such as gender, migration background, and the number of parents in the household they grew up in) and socioeconomic status (based on parental income). Our focus is on the municipalities, neighborhoods, and postal codes where the children grew up, regardless of their current place of residence. Subsequently, we analyze these geographical disparities in later-life outcomes across various areas in the Netherlands. The final results are now accessible on the interactive website [KansenKaart.nl](https://kansenkaart.nl/), which provides information on a wide range of outcomes, including health, education, and economic productivity.
 
-So far, we have a total of 59 outcomes derived from seven cohorts. These seven cohorts are created using this repository. More detailed information on the cohorts can be found [here]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/documentation/COHORTS.md). The final estimates of these 59 outcomes are created using the repository [kansenkaart analysis](https://github.com/sodascience/kansenkaart_analysis).
+So far, we have obtained a total of 64 outcomes from seven different cohorts. These cohorts have been generated utilizing the repository provided. For more comprehensive information about the cohorts, please refer to the available details [here](https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/documentation/COHORTS.md). The final estimates of these outcomes are created using the repository [kansenkaart analysis](https://github.com/sodascience/kansenkaart_analysis).
 
 ## Installation
 - Clone this repository to a folder on your machine
@@ -22,16 +22,13 @@ So far, we have a total of 59 outcomes derived from seven cohorts. These seven c
 The cohort data sets are created using the file `create_cohort_data.R`. At the top of this file, change the desired input configuration to one of the following:
 - `config/main.yml`
 - `config/students.yml`
-
 - `config/high_school.yml`
 - `config/elementary_school.yml`
 - `config/classroom.yml`
 - `config/perinatal.yml`
+- `config/child_mortality.yml`
 
 After this change, run the entire file to create the cohort data set in the scratch folder!
-
-The cohort data set for the child mortality cohort is created using the file `create_cohort_data_mortality.R`, which already contains the desired input configuration `config/child_mortality.yml`. After running the entire file, the created cohort data set can be found in the scratch folder. 
-
 
 # Details
 
@@ -57,8 +54,7 @@ The data preparation pipeline has four components:
     - Selecting variables of interest.
     - Writing `kansenkaart_data.rds` to the scratch folder.
 
-More information on these four components can be found [here]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/documentation/COMPONENTS.md). Information on the child mortality components can be found [here]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/documentation/CHILD_MORTALITY_COHORT.md).
-
+More information on these four components can be found [here]( https://github.com/sodascience/kansenkaart_preprocessing/blob/cbs_updated/resources/documentation/COMPONENTS.md). 
 
 ## Package management
 The CBS server has specific versions of packages. A package version dump is available in the `resources` folder. For package management, we use `renv`. This ensures the same versions are installed as in CBS.
