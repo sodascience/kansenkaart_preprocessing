@@ -5,13 +5,6 @@
 # (c) ODISSEI Social Data Science team 2023
 
 
-
-# clean workspace
-rm(list=ls())
-setwd("H:/IGM project/kansenkaart_preprocessing")
-options(scipen=999)
-
-
 # input the desired config file here:
 # yml: main, students, high_school, elementary_school, classroom, 
 # perinatal, child_mortality
