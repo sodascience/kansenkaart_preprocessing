@@ -1,8 +1,3 @@
----
-output:
-  pdf_document: default
-  html_document: default
----
 # KansenKaart preprocessing components
 To create the cohorts, we utilize the KansenKaart preprocessing pipeline, which consists of four components. Below, we provide a detailed description of these four components.
 
