@@ -13,7 +13,7 @@ library(haven)
 
 # create countries
 tab <- tibble(
-LANDEN = c("Nederland", "Turkije", "Marokko", "Suriname", "Nederlandse Antillen (oud)",
+  LAND = c("Nederland", "Turkije", "Marokko", "Suriname", "Nederlandse Antillen (oud)",
   "Frankrijk", "Zwitserland", "Oostenrijk", "België", "Hongarije", "Cyprus", 
   "Zweden", "IJsland", "Griekenland", "Ierland", "Finland", "Luxemburg",
   "Noorwegen", "Oekraine", "Spanje", "Grootbrittannië", "Duitsland", "Monaco",
@@ -110,7 +110,7 @@ western <- c(
 
 # create landtype
 tab <- tab %>%
-  mutate(LANDTYPE = ifelse(LANDEN %in% western, "Westers", "NietWesters"))
+  mutate(LANDTYPE = ifelse(LAND %in% western, "Westers", "NietWesters"))
 
 
 # save tab
