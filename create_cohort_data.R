@@ -23,15 +23,15 @@ if (!dir.exists(loc$scratch_folder)) dir.create(loc$scratch_folder)
 
 #### RUN ####
 # select cohort
-source(list.files(file.path("src", cfg$cohort_nam), "01_", full.names = TRUE))
+source(list.files(file.path("src", cfg$cohort_name), "01_", full.names = TRUE))
 
 # add predictors
-source(list.files(file.path("src", cfg$cohort_nam), "02_", full.names = TRUE))
+source(list.files(file.path("src", cfg$cohort_name), "02_", full.names = TRUE))
 
 # add outcomes
-source(list.files(file.path("src", cfg$cohort_nam), "03_", full.names = TRUE))
+source(list.files(file.path("src", cfg$cohort_name), "03_", full.names = TRUE))
 
 # post-process
-source(list.files(file.path("src", cfg$cohort_nam), "04_", full.names = TRUE))
+source(list.files(file.path("src", cfg$cohort_name), "04_", full.names = TRUE))
 
 # the pre-processed cohort data file is now available in the scratch folder!
