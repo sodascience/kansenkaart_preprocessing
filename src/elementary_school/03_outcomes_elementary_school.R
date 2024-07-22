@@ -3,7 +3,7 @@
 # 3. Outcome creation.
 #   - Adding elementary school outcomes to the cohort.
 #
-# (c) ODISSEI Social Data Science team 2022
+# (c) ODISSEI Social Data Science team 2024
 
 
 
@@ -13,9 +13,13 @@ library(lubridate)
 library(haven)
 library(readxl)
 
+
 #### CONFIGURATION ####
 # load main cohort dataset
 cohort_dat <- read_rds(file.path(loc$scratch_folder, "02_predictors.rds"))
+
+sample_size <- read_rds(file.path(loc$scratch_folder, "02_sample_size.rds"))
+
 
 
 #### ELEMENTARY SCHOOL OUTCOMES ####
@@ -33,16 +37,19 @@ get_inschrwpo_filename <- function(year) {
 
 
 school_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), WPOLEERJAAR = character(), 
-                     WPOGROEPSGROOTTE = character(),
-                     WPOREKENEN = character(), WPOTAALLV = character(), WPOTAALTV = character(), 
-                     WPOTOETSADVIES = character(), WPOADVIESVO = character(), WPOADVIESHERZ = character())
+                     WPOBRIN_crypt = character(), WPOBRINVEST = character(), WPOGROEPSGROOTTE = character(),
+                     WPOREKENEN = character(), WPOTAALLV = character(), WPOTAALTV = character(),
+                     WPOTOETSADVIES = character(), WPOADVIESVO = character(), 
+                     WPOADVIESHERZ = character(), WPOTYPEPO = character())
+
 for (year in seq(as.integer(cfg$elementary_school_year_min), as.integer(cfg$elementary_school_year_max))) {
   school_dat <- 
     # read file from disk
     read_sav(get_inschrwpo_filename(year), 
-             col_select = c("RINPERSOONS", "RINPERSOON", "WPOLEERJAAR", "WPOREKENEN",
-                            "WPOTAALLV", "WPOTAALTV", "WPOTOETSADVIES", "WPOADVIESVO",
-                            "WPOADVIESHERZ", "WPOGROEPSGROOTTE")) %>% 
+             col_select = c("RINPERSOONS", "RINPERSOON", "WPOLEERJAAR", "WPOGROEPSGROOTTE",
+                            "WPOTOETSADVIES","WPOADVIESVO", "WPOADVIESHERZ", 
+                            "WPOREKENEN", "WPOTAALLV", "WPOTAALTV",
+                            "WPOBRIN_crypt", "WPOBRINVEST", "WPOTYPEPO")) %>% 
     mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value")) %>%
     # select only children that are in the cohort
     filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
@@ -104,7 +111,7 @@ cohort_dat <- cohort_dat %>%
     final_school_advice = ifelse(!is.na(WPOADVIESHERZ), WPOADVIESHERZ, WPOADVIESVO),
     
     vmbo_gl_final = ifelse(final_school_advice %in% c(40, 41, 42, 43, 44, 45, 50, 
-                                                             51, 52, 53, 60, 61, 70), 1, 0),
+                                                      51, 52, 53, 60, 61, 70), 1, 0),
     havo_final      = ifelse(final_school_advice %in% c(60, 61, 70), 1, 0),
     vwo_final       = ifelse(final_school_advice == 70, 1, 0)
   )
@@ -174,11 +181,14 @@ cohort_dat <-
         is.na(havo_final) & is.na(vwo_final) &
         is.na(under_advice) & is.na(over_advice))
   ) %>%
-  select(-c(WPOGROEPSGROOTTE, WPOREKENEN, WPOTAALLV, WPOTAALTV, 
+  select(-c(WPOBRIN_crypt, WPOBRINVEST, WPOTYPEPO, WPOGROEPSGROOTTE, WPOREKENEN, WPOTAALLV, WPOTAALTV, 
             WPOTOETSADVIES, WPOADVIESVO, WPOADVIESHERZ, advice_type, 
             final_school_advice))
-  
 
+
+# record sample size
+sample_size <- sample_size %>% 
+  mutate(n_5_child_outcomes = nrow(cohort_dat))
 
 #### LIVE CONTINUOUSLY IN NL ####
 
@@ -241,6 +251,9 @@ cohort_dat <-
 
 rm(adres_tab, days_tab, child_adres_date)
 
+# record sample size
+sample_size <- sample_size %>% 
+  mutate(n_6_child_residency = nrow(cohort_dat))
 
 
 #### YOUTH HEALTH COSTS ####
@@ -401,10 +414,9 @@ cohort_dat <-
   cohort_dat %>%
   mutate(youth_protection = ifelse(is.na(youth_protection), 0, youth_protection))
 
-
 #### LIVING SPACE PER HOUSEHOLD MEMBER ####
 
-# load home addresses
+#load home addresses
 adres_tab <- read_sav(file.path(loc$data_folder, loc$gbaao_data)) %>%
   mutate(
     RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
@@ -523,6 +535,214 @@ cohort_dat <-
 
 rm(household_members)
 
+#### CLASS COMPOSITION ####
+
+# load class cohort data
+class_cohort_dat <- read_rds(file.path(loc$scratch_folder, "class_cohort.rds"))
+
+# combine the main sample and class sample
+class_cohort_dat <- bind_rows(
+  class_cohort_dat %>% select ("RINPERSOON", "RINPERSOONS", "GBAGEBOORTELANDMOEDER", "GBAGEBOORTELANDVADER", "income_parents_perc"), 
+  cohort_dat %>% select ("RINPERSOON", "RINPERSOONS", "GBAGEBOORTELANDMOEDER", "GBAGEBOORTELANDVADER", "income_parents_perc"), 
+)
+
+school_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), WPOLEERJAAR = character(), 
+                     WPOBRIN_crypt = character(), WPOBRINVEST = character(), WPOGROEPSGROOTTE = character(),
+                     WPOREKENEN = character(), WPOTAALLV = character(), WPOTAALTV = character(),
+                     WPOTOETSADVIES = character(), WPOADVIESVO = character(), 
+                     WPOADVIESHERZ = character(), WPOTYPEPO = character())
+
+
+for (year in seq(as.integer(cfg$elementary_school_year_min), as.integer(cfg$elementary_school_year_max))) {
+  school_dat <- 
+    # read file from disk
+    read_sav(get_inschrwpo_filename(year), 
+             col_select = c("RINPERSOONS", "RINPERSOON", "WPOLEERJAAR", "WPOGROEPSGROOTTE",
+                            "WPOTOETSADVIES","WPOADVIESVO", "WPOADVIESHERZ", 
+                            "WPOREKENEN", "WPOTAALLV", "WPOTAALTV",
+                            "WPOBRIN_crypt", "WPOBRINVEST", "WPOTYPEPO")) %>% 
+    mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value")) %>%
+    # add year
+    mutate(year = year) %>% 
+    # add to income children
+    bind_rows(school_dat, .)
+}
+
+# keep group 8 pupils
+school_dat <- school_dat %>%
+  filter(RINPERSOONS == "R") %>%
+  mutate(WPOLEERJAAR = trimws(as.character(WPOLEERJAAR))) %>%
+  filter(WPOLEERJAAR == "8") %>%
+  select(-WPOLEERJAAR)
+
+
+# link to classroom sample
+school_dat <- school_dat %>%
+  left_join(class_cohort_dat, 
+            by = c("RINPERSOON", "RINPERSOONS"))%>%
+  # drop all children who are not in the large classroom sample 
+  filter(!is.na(income_parents_perc))
+
+
+# primary school ID
+school_dat <- school_dat %>%
+  mutate(across(c("WPOBRIN_crypt", "WPOBRINVEST"), as.character)) %>%
+  mutate(school_ID = paste0(WPOBRIN_crypt, WPOBRINVEST)) %>%
+  select(-c(WPOBRIN_crypt, WPOBRINVEST))
+
+# convert NA
+school_dat <-
+  school_dat %>%
+  mutate(across(c("WPOGROEPSGROOTTE", "WPOTOETSADVIES", "WPOADVIESVO", 
+                  "WPOREKENEN", "WPOTAALLV", "WPOTAALTV",
+                  "WPOADVIESHERZ"), as.character)) %>%
+  mutate(across(c("WPOGROEPSGROOTTE", "WPOTOETSADVIES", 
+                  "WPOREKENEN", "WPOTAALLV", "WPOTAALTV",
+                  "WPOADVIESVO", "WPOADVIESHERZ"), as.numeric))
+
+
+# create outcome variables
+school_dat <-
+  school_dat %>%
+  mutate(
+    # rekenen, lezen & taalverzorging
+    math     = ifelse((WPOREKENEN == 3 | WPOREKENEN == 4), 1, 0),
+    reading  = ifelse(WPOTAALLV == 4, 1, 0),
+    language = ifelse(WPOTAALTV == 4, 1, 0),
+    
+    # cito test outcomes
+    vmbo_gl_test = ifelse(WPOTOETSADVIES %in% c(42, 44, 60, 61, 70), 1, 0),
+    havo_test      = ifelse(WPOTOETSADVIES %in% c(60, 61, 70), 1, 0),
+    vwo_test       = ifelse(WPOTOETSADVIES == 70, 1, 0),
+    
+    # final high school advice 
+    # replace 80 (= Geen specifiek advies mogelijk) with NA
+    WPOADVIESVO = ifelse(WPOADVIESVO == 80, NA, WPOADVIESVO),
+    # replace final school advice (wpoadviesvo) with wpoadviesherz if wpoadviesherz is not missing
+    final_school_advice = ifelse(!is.na(WPOADVIESHERZ), WPOADVIESHERZ, WPOADVIESVO),
+    
+    vmbo_gl_final = ifelse(final_school_advice %in% c(40, 41, 42, 43, 44, 45, 50, 
+                                                      51, 52, 53, 60, 61, 70), 1, 0),
+    havo_final      = ifelse(final_school_advice %in% c(60, 61, 70), 1, 0),
+    vwo_final       = ifelse(final_school_advice == 70, 1, 0)
+  )
+
+
+# replace NA
+school_dat <-
+  school_dat %>%
+  mutate(
+    math     = ifelse(is.na(WPOREKENEN), NA, math),
+    reading  = ifelse(is.na(WPOTAALLV), NA, reading),
+    language = ifelse(is.na(WPOTAALTV), NA, language),
+    
+    # cito test outcomes
+    vmbo_gl_test = ifelse(is.na(WPOTOETSADVIES), NA, vmbo_gl_test),
+    havo_test    = ifelse(is.na(WPOTOETSADVIES), NA, havo_test),
+    vwo_test     = ifelse(is.na(WPOTOETSADVIES), NA, vwo_test)
+  )
+
+
+
+
+# create parents rank income outcomes
+school_dat <- school_dat %>%
+  mutate(
+    # create dummy for below 25th 
+    income_below_25th = ifelse(income_parents_perc < 0.25, 1, 0),
+    # create dummy for below 50th 
+    income_below_50th = ifelse(income_parents_perc < 0.50, 1, 0),
+    # create dummy for above 75th
+    income_above_75th = ifelse(income_parents_perc > 0.75, 1, 0)
+  )
+
+
+# create outcome for children with both parents born in a foreign country
+school_dat <- school_dat %>%
+  mutate(
+    GBAGEBOORTELANDMOEDER = as_factor(GBAGEBOORTELANDMOEDER),
+    GBAGEBOORTELANDVADER = as_factor(GBAGEBOORTELANDVADER)
+  ) %>%
+  mutate(
+    foreign_born_parents = 
+      ifelse((GBAGEBOORTELANDMOEDER != "Nederland" & 
+                GBAGEBOORTELANDVADER != "Nederland"),  1, 0))
+
+
+# CLASSROOM OUTCOMES
+# 1.  class_vmbo_gl_test
+# 2.  class_havo_test
+# 3.  class_vwo_test
+# 4.  class_foreign_born_parents
+# 5.  class_income_below_25th
+# 6.  class_income_below_50th
+# 7.  class_income_above_75th
+# 8.  class_math
+# 9.  class_language
+# 10. class_reading
+# 11.  class_size (2014 - 2016)
+
+# only keep classes with more than one student per class
+school_dat <- school_dat %>%
+  group_by(school_ID, year) %>%
+  mutate(n = n()) %>%
+  filter(n > 1)
+
+
+# hold out mean function
+hold_out_means <- function(x) {
+  hold <- ((sum(x, na.rm = TRUE) - x) / (length(x) - 1))
+  return(hold)
+}
+
+# hold out means = mean of the class without the child him/herself
+school_dat <-
+  school_dat %>%
+  group_by(school_ID, year) %>%
+  mutate(
+    N_students_per_school = n(),
+    
+    class_math = hold_out_means(math),
+    class_reading = hold_out_means(reading),
+    class_language = hold_out_means(language),
+    
+    class_foreign_born_parents = hold_out_means(foreign_born_parents),
+    
+    class_vmbo_gl_test = hold_out_means(vmbo_gl_test),
+    class_havo_test = hold_out_means(havo_test),
+    class_vwo_test = hold_out_means(vwo_test),
+    
+    class_income_below_25th = hold_out_means(income_below_25th),
+    class_income_below_50th = hold_out_means(income_below_50th),
+    class_income_above_75th = hold_out_means(income_above_75th)
+  ) %>% 
+  rename(class_size = WPOGROEPSGROOTTE)
+
+
+# keep unique observations,for duplicates select the last time the child is in 8th grade
+school_dat <- school_dat %>%
+  arrange(desc(year)) %>%
+  group_by(RINPERSOONS, RINPERSOON) %>%
+  filter(row_number() == 1)
+
+
+# select relevant variables
+school_dat <-
+  school_dat %>%
+  select(c(RINPERSOONS, RINPERSOON, school_ID, 
+           N_students_per_school, class_foreign_born_parents,  
+           class_vmbo_gl_test, class_havo_test, class_vwo_test, 
+           class_income_below_25th, class_income_below_50th, class_income_above_75th,
+           class_math, class_reading, class_language, class_size ))
+
+
+# add to outcomes to cohort
+cohort_dat <- left_join(cohort_dat, school_dat, 
+                        by = c("RINPERSOONS", "RINPERSOON")) %>%
+  select(-c(school_ID, N_students_per_school, birth_year))
+
+rm(school_dat, class_cohort_dat)
+
 
 
 #### PREFIX ####
@@ -532,7 +752,12 @@ outcomes <- c("vmbo_gl_final", "havo_final", "vwo_final",
               "vmbo_gl_test", "havo_test", "vwo_test",
               "over_advice", "under_advice", "math", "language", 
               "reading", "youth_health_costs", "youth_protection", 
-              "living_space_pp")
+              "living_space_pp","class_vmbo_gl_test", "class_havo_test", 
+              "class_vwo_test", "class_foreign_born_parents", 
+              "class_income_below_25th", "class_income_below_50th",
+              "class_income_above_75th", "class_math", "class_language", 
+              "class_reading", "class_size")
+
 suffix <- "c11_"
 
 
@@ -540,9 +765,15 @@ suffix <- "c11_"
 cohort_dat <- 
   cohort_dat %>%
   rename_with(~str_c(suffix, .), .cols = all_of(outcomes)) %>% 
-  ungroup() 
+  ungroup() %>%
+  #remove parents birth country
+  select(-c(GBAGEBOORTELANDMOEDER, GBAGEBOORTELANDVADER))
 
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
 
+
+#write sample size reduction table to scratch
+sample_size <- sample_size %>% mutate(cohort_name = cohort)
+write_rds(sample_size, file.path(loc$scratch_folder, "03_sample_size.rds"))

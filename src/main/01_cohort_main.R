@@ -10,6 +10,7 @@
 
 
 
+
 #### PACKAGES ####
 library(tidyverse)
 library(lubridate)
@@ -23,11 +24,12 @@ gba_path <- file.path(loc$data_folder, loc$gba_data)
 gba_dat <-  
   read_sav(gba_path, col_select = c("RINPERSOONS", "RINPERSOON", "GBAGESLACHT", 
                                     "GBAGEBOORTEJAAR", "GBAGEBOORTEMAAND", "GBAGEBOORTEDAG", "GBAGENERATIE", 
-                                    "GBAHERKOMSTGROEPERING")) %>% 
+                                    "GBAHERKOMSTGROEPERING", "GBAGEBOORTELAND")) %>% 
   mutate(birthdate = dmy(paste(GBAGEBOORTEDAG, GBAGEBOORTEMAAND, GBAGEBOORTEJAAR, sep = "-"))) %>% 
   select(-GBAGEBOORTEJAAR, -GBAGEBOORTEMAAND, -GBAGEBOORTEDAG) %>%
   mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
          GBAHERKOMSTGROEPERING = as_factor(GBAHERKOMSTGROEPERING, levels = "labels"),
+         GBAGEBOORTELAND = as_factor(GBAGEBOORTELAND, levels = "labels"),
          GBAGENERATIE = as_factor(GBAGENERATIE, levels = "labels"),
          GBAGESLACHT = as_factor(GBAGESLACHT, levels = "labels")) %>%
   mutate(GBAGESLACHT = as.factor(as.character(GBAGESLACHT))) %>%
@@ -38,71 +40,11 @@ cohort_dat <-
   gba_dat %>% 
   filter(birthdate %within% interval(dmy(cfg$child_birth_date_min), dmy(cfg$child_birth_date_max)))
 
-
-
-#### LIVE CONTINUOUSLY IN NL ####
-  
-# We only include children who live continuously in the Netherlands 
-adres_path <- file.path(loc$data_folder, loc$gbaao_data)
-adres_tab  <- read_sav(adres_path) %>%
-  # select only children
-  filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
-  mutate(
-    RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
-    GBADATUMAANVANGADRESHOUDING = ymd(GBADATUMAANVANGADRESHOUDING),
-    GBADATUMEINDEADRESHOUDING = ymd(GBADATUMEINDEADRESHOUDING)
-  ) %>%
-  select(-c(SOORTOBJECTNUMMER, RINOBJECTNUMMER))
-
-
-# residency requirement for people between child_live_start and child_live_end
-residency_tab <- 
-  cohort_dat %>%
-  select(RINPERSOONS, RINPERSOON, birthdate) %>%
-  mutate(start_date = ymd(paste0(year(birthdate), "-01-01")) %m+% years(cfg$child_live_start), 
-         end_date = ymd(paste0(year(birthdate), "-12-31")) %m+% years(cfg$child_live_end),
-         cutoff_days = as.numeric(difftime(end_date, start_date, units = "days")) - 
-  cfg$child_live_slack_days) %>%
-  select(-birthdate)
-
-
-# throw out anything with an end date before start_date, and anything with a start date after end_date
-# then also set the start date of everything to start_date, and the end date of everything to end_date
-# then compute the timespan of each record
-adres_tab <- 
-  adres_tab %>% 
-  inner_join(residency_tab, by = c("RINPERSOONS", "RINPERSOON")) %>%
-  filter(!(GBADATUMEINDEADRESHOUDING < start_date),
-         !(GBADATUMAANVANGADRESHOUDING > end_date)) %>%
-  mutate(
-    recordstart = as_date(ifelse(GBADATUMAANVANGADRESHOUDING < start_date, start_date, GBADATUMAANVANGADRESHOUDING)),
-    recordend   = as_date(ifelse(GBADATUMEINDEADRESHOUDING > end_date, end_date, GBADATUMEINDEADRESHOUDING)) ,
-    timespan    = difftime(recordend, recordstart, units = "days")
-  ) %>%
-  select(-c(GBADATUMAANVANGADRESHOUDING, GBADATUMEINDEADRESHOUDING, 
-         start_date, end_date))
-
-
-# group by person and sum the total number of days
-# then compute whether this person lived in the Netherlands continuously
-days_tab <- 
-  adres_tab %>% 
-  select(RINPERSOONS, RINPERSOON, timespan, cutoff_days) %>% 
-  mutate(timespan = as.numeric(timespan)) %>% 
-  group_by(RINPERSOONS, RINPERSOON, cutoff_days) %>% 
-  summarize(total_days = sum(timespan)) %>%  
-  mutate(continuous_living = total_days >= cutoff_days) %>% 
-  select(RINPERSOONS, RINPERSOON, continuous_living)
-
-# add to cohort and filter
-cohort_dat <- 
-  left_join(cohort_dat, days_tab, by = c("RINPERSOONS", "RINPERSOON")) %>% 
-  filter(continuous_living) %>% 
-  select(-continuous_living)
-
 # free up memory
-rm(adres_tab, days_tab, residency_tab)
+rm(gba_dat)
 
+# record sample size
+sample_size <- tibble(n_0_birth_cohort = nrow(cohort_dat))
 
 
 #### PARENT LINK ####
@@ -115,32 +57,8 @@ cohort_dat <- inner_join(
   by = c("RINPERSOONS", "RINPERSOON")
 )
 
-# add parents birth dates to cohort
-cohort_dat <- 
-  cohort_dat %>% 
-  left_join(gba_dat %>% select(RINPERSOONS, RINPERSOON, birthdate),
-            by = c("RINPERSOONMa" = "RINPERSOON", "RINPERSOONSMa" = "RINPERSOONS"),
-            suffix = c("", "_ma")) %>%
-  left_join(gba_dat %>% select(RINPERSOONS, RINPERSOON, birthdate), 
-            by = c("RINPERSOONpa" = "RINPERSOON", "RINPERSOONSpa" = "RINPERSOONS"), 
-            suffix = c("", "_pa"))
-
-
-# free up memory
-rm(gba_dat)
-
-# filter out children with too old or too young parents
-cohort_dat <- 
-  cohort_dat %>% 
-  mutate(
-    age_at_birth_ma = interval(birthdate_ma, birthdate) / years(1),
-    age_at_birth_pa = interval(birthdate_pa, birthdate) / years(1)
-  ) %>% 
-  filter(
-    (is.na(age_at_birth_ma) | (age_at_birth_ma >= cfg$parent_min_age & age_at_birth_ma <= cfg$parent_max_age)),
-    (is.na(age_at_birth_pa) | (age_at_birth_pa >= cfg$parent_min_age & age_at_birth_pa <= cfg$parent_max_age))
-  ) %>%
-  select(-c(age_at_birth_ma, age_at_birth_pa, birthdate_ma, birthdate_pa))
+# record sample size
+sample_size <- sample_size %>% mutate(n_1_child_parent_link = nrow(cohort_dat))
 
 
 #### REGION LINK ####
@@ -250,7 +168,11 @@ cohort_dat <-
   mutate(across(c("postcode3", "postcode4", "gemeente_code", 
                   "wijk_code", "buurt_code", "corop_code"), as.factor))
 
-
+# record sample size
+sample_size <- sample_size %>% mutate(n_2_region_link = nrow(cohort_dat))
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "01_cohort.rds"))
+
+write_rds(sample_size, file.path(loc$scratch_folder, "01_sample_size.rds"))
+

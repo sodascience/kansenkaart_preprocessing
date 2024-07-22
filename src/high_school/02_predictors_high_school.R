@@ -5,7 +5,7 @@
 #    - Adding migration background information to the cohort.
 #    - Writing `scratch/02_predictor.rds`
 #
-# (c) ODISSEI Social Data Science team 2022
+# (c) ODISSEI Social Data Science team 2024
 
 
 
@@ -21,6 +21,8 @@ library(readxl)
 cohort_dat <- read_rds(file.path(loc$scratch_folder, "01_cohort.rds")) %>%
   mutate(birth_year = year(birthdate))
 
+sample_size <- read_rds(file.path(loc$scratch_folder, "01_sample_size.rds"))
+
 
 # create a table with incomes at the cpi_base_year level
 # first, load consumer price index data (2015 = 100)
@@ -32,7 +34,117 @@ cpi_tab <- read_excel(loc$cpi_index_data) %>%
 cpi_tab <- cpi_tab %>%
   mutate(
     cpi = cpi / cpi_tab %>% filter(year == cfg$cpi_base_year) %>% pull(cpi) * 100)
-       
+
+
+#### LIVE CONTINUOUSLY IN NL FOR PARENTS ####
+
+
+# We only include parents who live continuously in the Netherlands 
+adres_path <- file.path(loc$data_folder, loc$gbaao_data)
+adres_tab  <- read_sav(adres_path) %>%
+  # select only parents
+  filter((RINPERSOON %in% cohort_dat$RINPERSOONpa) | 
+           (RINPERSOON %in% cohort_dat$RINPERSOONMa)) %>% 
+  mutate(
+    RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
+    GBADATUMAANVANGADRESHOUDING = ymd(GBADATUMAANVANGADRESHOUDING),
+    GBADATUMEINDEADRESHOUDING = ymd(GBADATUMEINDEADRESHOUDING)
+  ) %>%
+  select(-c(SOORTOBJECTNUMMER, RINOBJECTNUMMER))
+
+
+# residency requirement for parents between parent_income_year_min and parent_income_year_max
+residency_tab <- 
+  cohort_dat %>%
+  select(RINPERSOONSMa, RINPERSOONMa, RINPERSOONSpa, RINPERSOONpa) %>%
+  mutate(start_date = ymd(paste0(cfg$parent_income_year_min, "-01-01")), 
+         end_date = ymd(paste0(cfg$parent_income_year_max, "-12-31")),
+         cutoff_days = as.numeric(difftime(end_date, start_date, units = "days")) - 
+           cfg$child_live_slack_days) %>%
+  unique()
+
+
+# throw out anything with an end date before start_date, and anything with a start date after end_date
+# then also set the start date of everything to start_date, and the end date of everything to end_date
+# then compute the time span of each record for parents
+# mothers
+adres_ma_tab <- 
+  adres_tab %>% 
+  inner_join(residency_tab %>% select(RINPERSOONSMa, RINPERSOONMa, start_date, 
+                                      end_date, cutoff_days) %>% unique(), 
+             by = c("RINPERSOON" = "RINPERSOONMa", "RINPERSOONS" = "RINPERSOONSMa")) %>%
+  filter(!(GBADATUMEINDEADRESHOUDING < start_date),
+         !(GBADATUMAANVANGADRESHOUDING > end_date)) %>%
+  mutate(
+    recordstart = as_date(ifelse(GBADATUMAANVANGADRESHOUDING < start_date, start_date, GBADATUMAANVANGADRESHOUDING)),
+    recordend   = as_date(ifelse(GBADATUMEINDEADRESHOUDING > end_date, end_date, GBADATUMEINDEADRESHOUDING)) ,
+    timespan    = difftime(recordend, recordstart, units = "days")
+  ) %>%
+  select(-c(GBADATUMAANVANGADRESHOUDING, GBADATUMEINDEADRESHOUDING, 
+            start_date, end_date))
+# fathers
+adres_pa_tab <- 
+  adres_tab %>% 
+  left_join(residency_tab %>% select(RINPERSOONSpa, RINPERSOONpa, start_date, 
+                                     end_date, cutoff_days) %>% unique(), 
+            by = c("RINPERSOON" = "RINPERSOONpa", "RINPERSOONS" = "RINPERSOONSpa")) %>%
+  filter(!(GBADATUMEINDEADRESHOUDING < start_date),
+         !(GBADATUMAANVANGADRESHOUDING > end_date)) %>%
+  mutate(
+    recordstart = as_date(ifelse(GBADATUMAANVANGADRESHOUDING < start_date, start_date, GBADATUMAANVANGADRESHOUDING)),
+    recordend   = as_date(ifelse(GBADATUMEINDEADRESHOUDING > end_date, end_date, GBADATUMEINDEADRESHOUDING)) ,
+    timespan    = difftime(recordend, recordstart, units = "days")
+  ) %>%
+  select(-c(GBADATUMAANVANGADRESHOUDING, GBADATUMEINDEADRESHOUDING, 
+            start_date, end_date))
+
+adres_tab <- rbind(adres_ma_tab, adres_pa_tab)
+
+
+# group by person and sum the total number of days
+# then compute whether this person lived in the Netherlands continuously
+days_tab <- 
+  adres_tab %>% 
+  select(RINPERSOONS, RINPERSOON, timespan, cutoff_days) %>% 
+  mutate(timespan = as.numeric(timespan)) %>% 
+  group_by(RINPERSOONS, RINPERSOON, cutoff_days) %>% 
+  summarize(total_days = sum(timespan)) %>%  
+  mutate(continuous_living = total_days >= cutoff_days) %>% 
+  select(RINPERSOONS, RINPERSOON, continuous_living)
+
+
+# add to data
+# mothers
+cohort_dat <- left_join(
+  x = cohort_dat, 
+  y = days_tab, 
+  by = c("RINPERSOONMa" = "RINPERSOON", "RINPERSOONSMa" = "RINPERSOONS")
+) %>%
+  rename(continuous_living_ma = continuous_living)
+# fathers
+cohort_dat <- left_join(
+  x = cohort_dat, 
+  y = days_tab, 
+  by = c("RINPERSOONpa" = "RINPERSOON", "RINPERSOONSpa" = "RINPERSOONS")
+) %>%
+  rename(continuous_living_pa = continuous_living)
+
+
+# remove parents if they both do not live continuously in NL
+cohort_dat <-
+  cohort_dat %>%
+  filter(continuous_living_pa == TRUE | continuous_living_ma == TRUE) %>%
+  select(-c(continuous_living_pa, continuous_living_ma))
+
+
+# free up memory
+rm(adres_tab, adres_ma_tab, adres_pa_tab, days_tab, residency_tab)
+
+# record sample size
+sample_size <- sample_size %>% 
+  mutate(n_3_parent_residency = 
+           nrow(cohort_dat %>% filter(birthdate%within%interval(dmy(cfg$child_birth_date_min), dmy(cfg$child_birth_date_max)))))
+
 
 #### PARENT INCOME ####
 
@@ -168,10 +280,19 @@ cohort_dat <-
   ungroup()
 
 
+#### SPLIT THE SAMPLE AND SAVE THE CLASS SAMPLE ####
+class_cohort_dat <- cohort_dat %>%
+  filter (!birthdate %within% interval(dmy(cfg$child_birth_date_min), dmy(cfg$child_birth_date_max)))
+# save the class sample to scratch
+write_rds(class_cohort_dat, file.path(loc$scratch_folder, "class_cohort.rds"))
+
+# filter cohort
+cohort_dat <- cohort_dat %>%
+  filter (birthdate %within% interval(dmy(cfg$child_birth_date_min), dmy(cfg$child_birth_date_max)))
+
+
 
 #### PARENT WEALTH ####
-
-
 # get wealth data from each requested year into single data frame
 get_veh_filename <- function(year) {
   # function to get latest version of specified year
@@ -439,7 +560,6 @@ household_dat <-
     DATUMEINDEHH = as.numeric(DATUMEINDEHH),
     TYPHH = as_factor(TYPHH, levels = "value")
   ) %>%
-  # mutate_all(na_if, "") %>%
   mutate(
     DATUMAANVANGHH = ymd(DATUMAANVANGHH),
     DATUMEINDEHH = ymd(DATUMEINDEHH)
@@ -480,14 +600,19 @@ cohort_dat <-
   left_join(hh_tab, by = c("RINPERSOONS", "RINPERSOON"))
 
 
-# convert NA to other
+# if child cannot be merged to type_hh (NA) then remove from the sample
 cohort_dat <- 
   cohort_dat %>%
-  mutate(type_hh = ifelse(is.na(type_hh), "other", type_hh))
+  filter(!is.na(type_hh)) %>%
+  mutate(type_hh = as.factor(type_hh))
+
 
 rm(household_dat, hh_tab)
 
-
+sample_size <- sample_size %>% 
+  mutate(n_4_parent_characteristics = nrow(cohort_dat))
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "02_predictors.rds"))
+
+write_rds(sample_size, file.path(loc$scratch_folder, "02_sample_size.rds"))
