@@ -4,7 +4,7 @@
 #   - Selecting variables of interest.
 #   - Writing `scratch/kansenkaart_data.rds`.
 #
-# (c) ODISSEI Social Data Science team 2023
+# (c) ODISSEI Social Data Science team 2024
 
 
 
@@ -38,7 +38,7 @@ cohort_dat <-
     TRUE ~ NA_character_
   ), levels = c("Low", "Mid", "High"))) 
 
-  
+
 # save as cohort name
 output_file <- file.path(loc$scratch_folder, paste0(cfg$cohort_name, "_cohort.rds"))
 write_rds(cohort_dat, output_file)

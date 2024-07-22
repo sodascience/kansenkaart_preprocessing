@@ -4,7 +4,7 @@
 #   - Selecting variables of interest.
 #   - Writing `scratch/kansenkaart_data.rds`.
 #
-# (c) ODISSEI Social Data Science team 2023
+# (c) ODISSEI Social Data Science team 2024
 
 
 
@@ -38,6 +38,7 @@ cohort_dat <-
     (wealth_parents_perc >= .65 & wealth_parents_perc <= .85) ~ "High",
     TRUE ~ NA_character_
   ), levels = c("Low", "Mid", "High"))) 
+
 
 
 

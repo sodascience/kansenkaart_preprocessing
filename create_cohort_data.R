@@ -2,12 +2,12 @@
 #
 # Full cohort creation script
 #
-# (c) ODISSEI Social Data Science team 2023
+# (c) ODISSEI Social Data Science team 2024
 
 
 # input the desired config file here:
-# yml: main, students, high_school, elementary_school, classroom, 
-# perinatal, child_mortality
+# yml: main, students, high_school, elementary_school
+# perinatal
 cohort <- "main"
 cfg_file <- paste0("config/", cohort, ".yml")
 

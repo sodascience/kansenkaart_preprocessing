@@ -4,7 +4,7 @@
 #   - Adding perinatal outcomes to the cohort.
 #   - Writing `scratch/03_outcomes.rds`.
 #
-# (c) ODISSEI Social Data Science team 2022
+# (c) ODISSEI Social Data Science team 2024
 
 
 
@@ -19,84 +19,11 @@ library(readxl)
 # load main cohort dataset
 cohort_dat <- read_rds(file.path(loc$scratch_folder, "02_predictors.rds"))
 
-
-# import percentile weight boys & girls
-boys_weight_tab <- read_excel(loc$birthweight_data, sheet = loc$boys_sheet, skip = 2) %>%
-  rename(
-    gestational_age = "Totaal aantal dagen",
-    p10_boys = "p10...6"
-  ) %>%
-  select(c(gestational_age, p10_boys))
-
-girls_weight_tab <- read_excel(loc$birthweight_data, sheet = loc$girls_sheet, skip = 2) %>%
-  rename(
-    gestational_age = "Totaal aantal dagen",
-    p10_girls = "p10...6"
-  ) %>%
-  select(c(gestational_age, p10_girls))
+sample_size <- read_rds(file.path(loc$scratch_folder, "02_sample_size.rds"))
 
 
 
-#### PERINED ####
-
-# function to get latest perined version of specified year
-get_prnl_filename <- function(year) {
-  fl <- list.files(
-    path = file.path(loc$data_folder, "GezondheidWelzijn/PRNL", year), 
-    pattern = paste0(year, "V[0-9]+(?i)(.sav)"),
-    full.names = TRUE
-  )
-  # return only the latest version
-  sort(fl, decreasing = TRUE)[1]
-}
-
-
-# create perinatal data
-perined_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), 
-                      rinpersoons_moeder = factor(), rinpersoon_moeder = character(), 
-                      amddd = double(), datumkind = double(), geslachtkind = factor(), 
-                      gewichtkind_ruw = double(), meerling = factor(), 
-                      sterfte = factor(), year = integer())
-for (year in seq(format(dmy(cfg$child_birth_date_min), "%Y"), 
-                 format(dmy(cfg$child_birth_date_max), "%Y"))){
-  
-  perined_dat <- read_sav(get_prnl_filename(year), col_select = 
-                            c("rinpersoons_kind_uitgebreid", "rinpersoon_kind", 
-                              "rinpersoons_moeder", "rinpersoon_moeder",
-                              "amddd", "datumkind", "geslachtkind", "gewichtkind_ruw", 
-                              "meerling", "sterfte")) %>% 
-    rename(RINPERSOONS = rinpersoons_kind_uitgebreid,
-           RINPERSOON = rinpersoon_kind) %>%
-    mutate(
-      RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
-      rinpersoons_moeder = as_factor(rinpersoons_moeder, levels = "values"),
-      geslachtkind = tolower(as_factor(geslachtkind, levels = "labels")),
-      meerling = tolower(as_factor(meerling, levels = "labels")),
-      sterfte = tolower(as_factor(sterfte, levels = "labels")), 
-                          year = year) %>%
-  select(c("RINPERSOONS", "RINPERSOON", "rinpersoons_moeder", "rinpersoon_moeder",
-           "amddd", "datumkind", "geslachtkind",
-           "gewichtkind_ruw", "meerling", "sterfte", "year")) %>%
-  bind_rows(perined_dat, .)
-
-}
-
-# remove gestational age below given days
-perined_dat <- perined_dat %>%
-  unique() %>%
-  filter(!(amddd < cfg$cut_off_days_min),
-         !(amddd > cfg$cut_off_days_max))
-
-
-# merge percentile to perined data
-perined_dat <- left_join(perined_dat, boys_weight_tab, by = c("amddd" = "gestational_age"))
-perined_dat <- left_join(perined_dat, girls_weight_tab, by = c("amddd" = "gestational_age"))
-
-rm(boys_weight_tab, girls_weight_tab)
-
-# post-processing
-perined_dat <- perined_dat %>% 
-  mutate(datumkind = ymd(datumkind))
+#### MORTALITY OUTCOMES ####
 
 
 #### DO AND DOODOORZTAB ####
@@ -192,7 +119,7 @@ get_gba_filename <- function(year) {
 
 dood_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), year = numeric())
 gba_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), date_of_death = character())
-for (year in seq(2013, format(dmy(cfg$child_birth_date_max), "%Y"))) {
+for (year in seq(2013, format(dmy(cfg$child_birth_date_max) + 1, "%Y"))) {
   
   dood_dat <- read_sav(get_dood_filename(year), 
                        col_select = c("RINPERSOONS", "RINPERSOON")) %>%
@@ -205,7 +132,7 @@ for (year in seq(2013, format(dmy(cfg$child_birth_date_max), "%Y"))) {
     rename(date_of_death = GBADatumOverlijden) %>%
     mutate(
       RINPERSOONS = as_factor(RINPERSOONS, levels = "value")
-    ) %>%
+    ) %>% distinct(RINPERSOONS, RINPERSOON) %>%
     # add to death data
     bind_rows(gba_dat, .)
 }
@@ -222,48 +149,104 @@ death_dat <- rbind(death_dat, dood_dat) %>%
   distinct(RINPERSOONS, RINPERSOON, .keep_all = TRUE)
 rm(dood_dat, gba_dat)
 
-perined_dat <- left_join(perined_dat, death_dat) 
 
+cohort_dat <- left_join(cohort_dat, death_dat)
+
+# free up memory
 rm(death_dat)
 
-# filter
-perined_dat <- 
-  perined_dat %>%
+# create difference between birth and death date
+cohort_dat <- cohort_dat %>%
   mutate(
-    diff_days = as.numeric(difftime(date_of_death, datumkind, units = "days"))
-    ) %>%
-  # remove all birth below certain days
-  filter(diff_days >= cfg$cut_off_mortality_day | is.na(date_of_death))
+    birthdate = ymd(birthdate),
+    diff_days = as.numeric(difftime(date_of_death, birthdate, units = "days"))
+  ) %>%
+  select(-date_of_death)
+
+# perinatal mortality: 24 weeks to < 7 days
+cohort_dat <- cohort_dat %>% 
+  mutate(
+    # perinatal mortality: 24 weeks to < 7 days
+    perinatal_mortality = ifelse(diff_days < 7 | 
+                                   (RINPERSOONS == "D" & sterfte %in% c('Ante partum', 'Durante partum', 'Postpartum 0-7 dagen')), 1, 0),
+    # neonatal mortality: 24 weeks to < 28 days
+    neonatal_mortality = ifelse(diff_days < 28 | 
+                                  (RINPERSOONS == "D" & sterfte %in% c('Ante partum', 'Durante partum', 'Postpartum 0-7 dagen')), 1, 0),
+    # infant mortality: 24 weeks to < 365 days
+    infant_mortality = ifelse(diff_days < 365 | 
+                                (RINPERSOONS == "D" & sterfte %in% c('Ante partum', 'Durante partum', 'Postpartum 0-7 dagen')), 1, 0), 
+    # Remove NAs
+    perinatal_mortality = ifelse(is.na(perinatal_mortality), 0, perinatal_mortality),
+    neonatal_mortality = ifelse(is.na(neonatal_mortality), 0, neonatal_mortality),
+    infant_mortality = ifelse(is.na(infant_mortality), 0, infant_mortality)
+    ) %>% 
+  select(-diff_days)
 
 
-#### OUTCOMES ####
+# cohort_dat <-
+#   cohort_dat %>%
+#   mutate(
+#     # perinatal mortality: 24 weeks to < 7 days
+#     perinatal_mortality =
+#       ifelse(sterfte %in% c('Ante partum', 'Durante partum', 'Postpartum 0-7 dagen',
+#                             'Fase overlijden onduidelijk'), 1, 0),
+#     # neonatal mortality: 24 weeks to < 28 days
+#     neonatal_mortality =
+#       ifelse(sterfte %in% c('Ante partum', 'Durante partum', 'Postpartum 0-7 dagen',
+#                             'Fase overlijden onduidelijk', 'Postpartum 8-28 dagen'), 1, 0),
+#     # infant mortality: 24 weeks to < 365 days
+#     infant_mortality =
+#       ifelse(sterfte %in% c('Ante partum', 'Durante partum', 'Postpartum 0-7 dagen',
+#                             'Fase overlijden onduidelijk', 'Postpartum 8-28 dagen',
+#                             'Postpartum > 28 dagen'), 1, 0))
+
+
+#### BIG2 OUTCOMES ####
+
+
+# import percentile weight boys & girls
+boys_weight_tab <- read_excel(loc$birthweight_data, sheet = loc$boys_sheet, skip = 2) %>%
+  rename(
+    gestational_age = "Totaal aantal dagen",
+    p10_boys = "p10...6"
+  ) %>%
+  select(c(gestational_age, p10_boys))
+
+girls_weight_tab <- read_excel(loc$birthweight_data, sheet = loc$girls_sheet, skip = 2) %>%
+  rename(
+    gestational_age = "Totaal aantal dagen",
+    p10_girls = "p10...6"
+  ) %>%
+  select(c(gestational_age, p10_girls))
+
+
+# merge percentile to perined data
+cohort_dat <- left_join(cohort_dat, boys_weight_tab, by = c("amddd" = "gestational_age"))
+cohort_dat <- left_join(cohort_dat, girls_weight_tab, by = c("amddd" = "gestational_age"))
+
 
 # small for gestational age & preterm birth cohort
-perined_dat <- perined_dat %>%
+cohort_dat <- 
+  cohort_dat %>%
   mutate(
     # preterm birth for infants with < 259 gestational age
     preterm_birth = ifelse(amddd < 259, 1, 0),
     
     # create small for gestational age outcome
-    sga = ifelse((geslachtkind == "jongen" & gewichtkind_ruw < p10_boys) |
-                               (geslachtkind == "meisje" & gewichtkind_ruw < p10_girls),
-                             1, 0)
-  )
-
-
-cohort_dat <- inner_join(cohort_dat, 
-                         perined_dat %>%
-                           select(RINPERSOONS, RINPERSOON, preterm_birth, sga))
+    sga = ifelse((geslacht == "jongen" & geboortegew < p10_boys) |
+                   (geslacht == "meisje" & geboortegew < p10_girls), 1, 0)) %>%
+  select(-c(p10_boys, p10_girls))
 
 
 # free up memory
-rm(perined_dat)
+rm(girls_weight_tab, boys_weight_tab)
 
 
 #### PREFIX ####
 
 # add prefix to outcomes
-outcomes <- c("sga", "preterm_birth")
+outcomes <- c('perinatal_mortality', 'neonatal_mortality', 
+              'infant_mortality', 'sga', 'preterm_birth')
 suffix <- "c00_"
 
 
@@ -273,12 +256,13 @@ cohort_dat <-
   rename_with(~str_c(suffix, .), .cols = all_of(outcomes)) %>% 
   ungroup() 
 
-
+# record sample size
+sample_size <- sample_size %>% mutate(n_5_child_outcomes = nrow(cohort_dat))
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
 
-
-test <- read_sav("G:/GezondheidWelzijn/PRNL/2016/PRN2016V1.sav")
-
+#write sample size reduction table to scratch
+sample_size <- sample_size %>% mutate(cohort_name = cohort)
+write_rds(sample_size, file.path(loc$scratch_folder, "03_sample_size.rds"))
 

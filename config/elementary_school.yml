@@ -11,19 +11,15 @@ default:
     # in this period
     child_live_slack_days: 31
     
-    # Only cohort children with parents in this age range should be considered
-    parent_min_age_at_birth: 15
-    parent_max_age_at_birth: 50
-    
     # Should we use the address registration of a child on a specific age
     childhood_home_age: 10
     
    # Postal code link to homes will be considered on this target date
-    postcode_target_date: "31/12/2022"
+    postcode_target_date: "31/12/2023"
     # Neighbourhood geo link to homes will be considered on this target date
-    gwb_target_date: "31/12/2022"
+    gwb_target_date: "31/12/2023"
     # Corop geo link to homes will be considered on this target date
-    corop_target_date: "31/12/2022"
+    corop_target_date: "31/12/2023"
     
     # Income will be deflated to cpi_base_year euros.
     cpi_base_year: 2020
@@ -46,17 +42,17 @@ default:
     
   file_locations:
     # The data folder is the root folder of the cbs microdata tables
-    data_folder: "cbsdata"
+    data_folder: "G:/"
     # The scratch folder is used to write intermediate output
     scratch_folder: "scratch/elementary_school"
     
     # path to the cbs microdata
     gba_data: "Bevolking/GBAPERSOONTAB/2018/GBAPERSOON2018TABV2.sav"
-    gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2021BUSV1.sav"
-    kind_data: "Bevolking/KINDOUDERTAB/KINDOUDER2021TABV1.sav"
-    postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2022031.sav"
-    vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2022TAB03V2.sav"
-    woon_data: "BouwenWonen/LEVCYCLWOONNIETWOONBUS/LEVCYCLWOONNIETWOONBUSV2021122.sav"
+    gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2023BUSV1.sav"
+    kind_data: "Bevolking/KINDOUDERTAB/KINDOUDER2023TABV1.sav"
+    postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2024031.sav"
+    vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2024TAB03V1.sav"
+    woon_data: "BouwenWonen/LEVCYCLWOONNIETWOONBUS/LEVCYCLWOONNIETWOONBUSV2023122.sav"
     household_data: "Bevolking/GBAHUISHOUDENSBUS/GBAHUISHOUDENS2020BUSV1.sav"
 
 
@@ -66,7 +62,7 @@ default:
     corop_data: "K:/Utilities/HULPbestanden/GebiedeninNederland/Gemeenten en COROP vanaf 1981.xlsx"
     advice_data: "resources/vo_advisering.xlsx"
     advice_data_sheet: "table"
-    opleiding_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/OPLEIDINGSNRREFV29.SAV"
-    cto_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/CTOREFV11.SAV"
+    opleiding_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/OPLEIDINGSNRREFV32.SAV"
+    cto_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/CTOREFV12.SAV"
   
 

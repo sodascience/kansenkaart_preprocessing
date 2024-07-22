@@ -4,7 +4,7 @@
 #   - Selecting variables of interest.
 #   - Writing `scratch/kansenkaart_data.rds`.
 #
-# (c) ODISSEI Social Data Science team 2023
+# (c) ODISSEI Social Data Science team 2024
 
 
 
@@ -36,7 +36,19 @@ cohort_dat <-
 
 
 
-# save as cohort name
-output_file <- file.path(loc$scratch_folder, paste0(cfg$cohort_name, "_cohort.rds"))
+#### SAVE TWO SAMPLES ####
+
+# infant mortality sample
+output_file <- file.path(cfg$mortality_name)
 write_rds(cohort_dat, output_file)
+
+big2_dat <-
+  cohort_dat %>%
+  filter(c00_perinatal_mortality == 0)
+
+
+# BIG2 sample
+output_file <- file.path(loc$scratch_folder, paste0(cfg$cohort_name, "_cohort.rds"))
+write_rds(big2_dat, output_file)
+
 
