@@ -7,9 +7,6 @@
 
 
 
-# clean workspace
-rm(list=ls())
-
 #### PACKAGES ####
 library(tidyverse)
 library(openxlsx)
@@ -28,8 +25,7 @@ main_tab <- read_rds(file.path(data_path, 'main', "03_sample_size.rds"))
 #### COHORT ####
 
 
-for (cohort in c("students", "high_school", "elementary_school",
-                 "perinatal")) {
+for (cohort in c("students", "high_school")) {
   
 
   tmp <- read_rds(file.path(data_path, cohort, "03_sample_size.rds"))
@@ -38,7 +34,24 @@ for (cohort in c("students", "high_school", "elementary_school",
   
 }
 
+elementary_school <- read_rds(file.path(data_path, "elementary_school", "03_sample_size.rds"))
+
+perinatal <- read_rds(file.path(data_path, "perinatal", "03_sample_size.rds"))
+
+
+
+# write to excel
+wb <- createWorkbook()
+
+addWorksheet(wb, 'main_tab')
+addWorksheet(wb, 'elementary_school')
+addWorksheet(wb, 'perinatal')
+
+writeDataTable(wb, 'main_tab', main_tab)
+writeDataTable(wb, 'elementary_school', elementary_school)
+writeDataTable(wb, 'perinatal', perinatal)
+
 
 # save table
-write.xlsx(main_tab, file.path(data_path, 'sample_size_reduction.xlsx'))
+saveWorkbook(wb, file.path(tab_path, 'sample_size_reduction.xlsx'))
 

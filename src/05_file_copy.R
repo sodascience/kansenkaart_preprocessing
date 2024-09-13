@@ -7,9 +7,6 @@
 
 
 
-# clean workspace
-rm(list=ls())
-
 #### PACKAGES ####
 library(tidyverse)
 library(haven)

@@ -16,16 +16,31 @@ library(lubridate)
 library(haven)
 library(readxl)
 library(dplyr)
+library(stringr)
+
+
+# # load data
+# cohort_dat <- read.csv('L:/8151_PERINED_20240805.csv', sep = ';', header = TRUE, row.names = NULL)
+# 
+# 
+# # select relevant columns
+# cohort_dat <-
+#   cohort_dat %>%
+#   select(c(CBKSoortNr_Kind, Rinpersoon_Kind, jaar, ddgeb, 
+#            CBKSoortNr_Moeder, Rinpersoon_Moeder,
+#            amddd, sterfte, gesl, geboortegew, etnic))
+
+# # save data
+# write_rds(cohort_dat, 'H:/IGM project/kansenkaart_preprocessing/resources/8151_PERINED.rds')
 
 
 #### SELECT COHORT FROM PERINED ####
-# only consider births where gestational age > 24 weeks.
+# only consider births where gestational age >= 24 weeks.
 # drop observations where RIN is unknown
 perined_path <- file.path(loc$perined_data)
 cohort_dat <- 
   read_rds(perined_path) %>%
-  select(-amww) %>%
-  mutate_at(c("Rinpersoon_Kind"),~na_if(.,"")) %>% drop_na() %>%
+  filter(!is.na(Rinpersoon_Kind)) %>%
   mutate(gesl = factor(gesl, levels = c("1", "2", "3", "UNK", ""),
                            labels = c("jongen", "meisje", NA, NA, NA)),
          sterfte =  factor(sterfte, levels = c("0", "1", "2", "3", "4", "5", "6"),
@@ -36,21 +51,28 @@ cohort_dat <-
                         labels = c("Kaukasisch", "Noord-Afrikaans", "Overig Afrikaans", "Turks",
                                    "Hindoestaans", "(Overig) Aziatisch", "Latijns Amerikaans",
                                    "Overig (waaronder gemengd)", "Onbekend")),
-         ddgeb = ymd(ddgeb)) %>%
-  rename("RINPERSOONS" = "Rinpersoons_Kind",
+         # ddgeb = ymd(ddgeb)
+         birthdate  = str_sub(ddgeb, 1, 10),
+         birthdate = ymd(birthdate), 
+         Rinpersoon_Kind = as.character(Rinpersoon_Kind)
+         ) %>%
+  rename("RINPERSOONS" = "CBKSoortNr_Kind",
          "RINPERSOON" = "Rinpersoon_Kind",
          "geslacht" = "gesl",
-         "birthdate" = "ddgeb",
          "etniciteit" = "etnic") %>%
+  select(-ddgeb) %>%
   # select birth dates for children 
   filter(birthdate %within% interval(dmy(cfg$child_birth_date_min), 
-                                 dmy(cfg$child_birth_date_max)))
+                                 dmy(cfg$child_birth_date_max))) 
 
 
 # remove gestational age below given days
 cohort_dat <- 
   cohort_dat %>%
-  filter(!(amddd < cfg$cut_off_days_min), !(amddd > cfg$cut_off_days_max)) 
+  filter(!(amddd < cfg$cut_off_days_min), !(amddd > cfg$cut_off_days_max)) %>%
+  # remove records without necessary information, such as birth weight
+  filter(!is.na(geboortegew))
+
 
 # record sample size
 sample_size <- tibble(n_0_birth_cohort = nrow(cohort_dat))
@@ -76,7 +98,6 @@ gba_dat <-
 
 # There are some records where RINPERSOONS is not R in perined, but do show up in GBAPersoontab
 # by linking by both RINPERSOONS and RINPERSOON we lose these records (391 records in total)
-# test <- cohort_dat %>% filter(RINPERSOONS != "R") %>% inner_join(gba_dat, by = "RINPERSOON")
 
 # add infant migration background information to cohort
 # should this be an inner_join? That would delete all records not in GBApersoontab,
@@ -101,17 +122,53 @@ cohort_dat <-
 
 
 #### PARENT LINK ####
-# add parent id to cohort   
+# add parent id to cohort
 kindouder_path <- file.path(loc$data_folder, loc$kind_data)
+cohort_dat <-
+  cohort_dat %>%
+  left_join(read_sav(kindouder_path) %>% select(-(XKOPPELNUMMER)) %>%
+               as_factor(only_labelled = TRUE, levels = "values"),
+             by = c("RINPERSOONS", "RINPERSOON"))
+
+
+# replace NA RINPERSOONSMA with KINDOUDETAB RINPERSOONMA
+cohort_dat <-
+  cohort_dat %>%
+  mutate(
+    CBKSoortNr_Moeder = as.character(CBKSoortNr_Moeder),
+    RINPERSOONSMa = as.character(RINPERSOONSMa)
+  ) %>%
+  mutate(
+    CBKSoortNr_Moeder = ifelse(CBKSoortNr_Moeder == 'G', RINPERSOONSMa, CBKSoortNr_Moeder),
+    Rinpersoon_Moeder = ifelse(is.na(Rinpersoon_Moeder), RINPERSOONMa, Rinpersoon_Moeder)
+  )
+
+
+# for children for whom we cannot find a match use the migration background of the mother
 cohort_dat <- 
   cohort_dat %>% 
-  inner_join(read_sav(kindouder_path) %>% select(-(XKOPPELNUMMER)) %>%
-               as_factor(only_labelled = TRUE, levels = "values"), 
-             by = c("RINPERSOONS", "RINPERSOON")) %>%
-  filter(!is.na(RINPERSOONMa))
+  left_join(gba_dat %>% select(RINPERSOONS, RINPERSOON, 
+                               GBAHERKOMSTGROEPERING, GBAGENERATIE), 
+            by = c("CBKSoortNr_Moeder" = "RINPERSOONS",
+                   "Rinpersoon_Moeder" = "RINPERSOON"), 
+            suffix = c("", "_ma")) %>%
+  mutate(GBAHERKOMSTGROEPERING = 
+           ifelse(is.na(GBAHERKOMSTGROEPERING), GBAHERKOMSTGROEPERING_ma, GBAHERKOMSTGROEPERING),
+         GBAGENERATIE = ifelse(is.na(GBAGENERATIE), GBAGENERATIE_ma, GBAGENERATIE)) %>%
+  select(-c(GBAHERKOMSTGROEPERING_ma, GBAGENERATIE_ma)) 
+
+# rename rinpersoons of the mother
+# cohort_dat <-
+#   cohort_dat %>%
+#   select(-c(RINPERSOONSMa, RINPERSOONMa, RINPERSOONSpa, RINPERSOONpa)) %>%
+#   rename(
+#     'RINPERSOONSMa' = 'CBKSoortNr_Moeder',
+#     'RINPERSOONMa' = 'Rinpersoon_Moeder'
+#   )
 
 # record sample size
 sample_size <- sample_size %>% mutate(n_1_child_parent_link = nrow(cohort_dat))
+
 
 #### REGION LINK ####
 # find childhood home
@@ -131,9 +188,9 @@ home_tab_child <-
 # keep address of mom at date of birth for stillbirths
 home_tab_mom <- 
   inner_join(adres_tab %>% filter(RINPERSOON %in% cohort_dat$RINPERSOONMa), 
-             cohort_dat %>% select(c(RINPERSOONSMa, RINPERSOONMa, birthdate)), 
-             by = c("RINPERSOONS" = "RINPERSOONSMa",
-                    "RINPERSOON" = "RINPERSOONMa"), 
+             cohort_dat %>% select(c(CBKSoortNr_Moeder, Rinpersoon_Moeder, birthdate)), 
+             by = c("RINPERSOONS" = "CBKSoortNr_Moeder",
+                    "RINPERSOON" = "Rinpersoon_Moeder"), 
              relationship = "many-to-many") %>%
   filter(birthdate %within% interval(GBADATUMAANVANGADRESHOUDING, 
                                      GBADATUMEINDEADRESHOUDING)) %>%
@@ -147,8 +204,8 @@ cohort_dat <- left_join(cohort_dat, home_tab_child)
 
 # join mother home address for stillbirth children 
 cohort_dat <- left_join(cohort_dat, home_tab_mom, 
-                         by = c("RINPERSOONSMa" = "RINPERSOONS",
-                                "RINPERSOONMa" = "RINPERSOON"), 
+                         by = c("CBKSoortNr_Moeder" = "RINPERSOONS",
+                                "Rinpersoon_Moeder" = "RINPERSOON"), 
                          suffix = c("", "_ma"))
 
 
@@ -159,10 +216,10 @@ cohort_dat <-
     type_childhood_home = as.character(type_childhood_home),
     type_mom_home = as.character(type_mom_home),
     childhood_home = ifelse(is.na(childhood_home), mom_home, childhood_home),
-    type_childhood_home = ifelse(is.na(type_childhood_home), type_mom_home, type_childhood_home),
+    type_childhood_home = ifelse(is.na(type_childhood_home), type_mom_home, 
+                                 type_childhood_home),
     type_childhood_home = as.factor(type_childhood_home)     
-    ) %>%
-  # this step removed 27 children
+    )  %>%
   filter(!is.na(childhood_home))
   
 

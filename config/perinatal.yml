@@ -5,8 +5,8 @@ default:
     mortality_name: "scratch/child_mortality/child_mortality_cohort.rds"
     
     # Child birth date filters the cohort by age
-    child_birth_date_min: "01/01/2008"
-    child_birth_date_max: "31/12/2016"
+    child_birth_date_min: "01/01/2011"
+    child_birth_date_max: "31/12/2020"
 
     # The cohort is allowed to be unregistered for this many days 
     # in this period
@@ -23,12 +23,12 @@ default:
     cpi_base_year: 2020
     
     # Parent income year range
-    parent_income_year_min: 2010
-    parent_income_year_max: 2014
+    parent_income_year_min: 2014
+    parent_income_year_max: 2018
     
     # Parent wealth year range
-    parent_wealth_year_min: 2010
-    parent_wealth_year_max: 2018
+    parent_wealth_year_min: 2011
+    parent_wealth_year_max: 2020
     
     # remove gestational age at given days
     cut_off_days_min: 168
@@ -44,15 +44,16 @@ default:
     scratch_folder: "scratch/perinatal"
     
     # path to the cbs microdata
-    gba_data: "Bevolking/GBAPERSOONTAB/2018/GBAPERSOON2018TABV2.sav"
+    gba_data: "Bevolking/GBAPERSOONTAB/2023/GBAPERSOON2023TABV1.sav"
     gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2023BUSV1.sav"
     kind_data: "Bevolking/KINDOUDERTAB/KINDOUDER2023TABV1.sav"
     postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2024031.sav"
     vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2023TAB03V1.sav"
-    household_data: "Bevolking/GBAHUISHOUDENSBUS/GBAHUISHOUDENS2020BUSV1.sav"
+    household_data: "Bevolking/GBAHUISHOUDENSBUS/GBAHUISHOUDENS2023BUSV1.sav"
     
     # perined data
-    perined_data: "H:/David/perined.rds"
+    # perined_data: "H:/David/perined.rds" # old perined data
+    perined_data: 'resources/8151_PERINED.rds'
     
     # resources
     cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_14112022_221558.xlsx"

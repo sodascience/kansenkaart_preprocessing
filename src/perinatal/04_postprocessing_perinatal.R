@@ -38,13 +38,12 @@ cohort_dat <-
 
 #### SAVE TWO SAMPLES ####
 
-# infant mortality sample
-output_file <- file.path(cfg$mortality_name)
-write_rds(cohort_dat, output_file)
 
+# remove deaths occurring before 7 days
 big2_dat <-
   cohort_dat %>%
-  filter(c00_perinatal_mortality == 0)
+  filter(c00_perinatal_mortality == 0) %>%
+  select(-c(c00_perinatal_mortality, c00_neonatal_mortality, c00_infant_mortality))
 
 
 # BIG2 sample
@@ -52,3 +51,11 @@ output_file <- file.path(loc$scratch_folder, paste0(cfg$cohort_name, "_cohort.rd
 write_rds(big2_dat, output_file)
 
 
+cohort_dat <-
+  cohort_dat %>%
+  select(-c(c00_sga, c00_preterm_birth))
+
+
+# infant mortality sample
+output_file <- file.path(cfg$mortality_name)
+write_rds(cohort_dat, output_file)

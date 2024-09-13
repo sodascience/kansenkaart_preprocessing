@@ -15,6 +15,7 @@ library(haven)
 library(readxl)
 
 
+
 #### CONFIGURATION ####
 # load main cohort dataset
 cohort_dat <- read_rds(file.path(loc$scratch_folder, "02_predictors.rds"))
@@ -88,7 +89,8 @@ for (year in seq(format(dmy(cfg$child_birth_date_min), "%Y"),
 }
 
 # post_processing
-death_dat <- death_dat %>%
+death_dat <- 
+  death_dat %>%
   mutate(date_of_death = ymd(date_of_death))
 
 
@@ -132,14 +134,16 @@ for (year in seq(2013, format(dmy(cfg$child_birth_date_max) + 1, "%Y"))) {
     rename(date_of_death = GBADatumOverlijden) %>%
     mutate(
       RINPERSOONS = as_factor(RINPERSOONS, levels = "value")
-    ) %>% distinct(RINPERSOONS, RINPERSOON) %>%
+    ) %>% distinct() %>%
     # add to death data
     bind_rows(gba_dat, .)
 }
 
 # post-processing
 dood_dat <- inner_join(dood_dat, gba_dat) %>%
-  mutate(date_of_death = ymd(date_of_death))
+  mutate(date_of_death = ymd(date_of_death)) %>%
+  # select(-year) %>%
+  distinct()
 
 
 # create one death data
@@ -156,49 +160,35 @@ cohort_dat <- left_join(cohort_dat, death_dat)
 rm(death_dat)
 
 # create difference between birth and death date
-cohort_dat <- cohort_dat %>%
+cohort_dat <- 
+  cohort_dat %>%
   mutate(
     birthdate = ymd(birthdate),
     diff_days = as.numeric(difftime(date_of_death, birthdate, units = "days"))
-  ) %>%
-  select(-date_of_death)
+  ) 
 
-# perinatal mortality: 24 weeks to < 7 days
-cohort_dat <- cohort_dat %>% 
+
+cohort_dat <- 
+  cohort_dat %>% 
   mutate(
-    # perinatal mortality: 24 weeks to < 7 days
-    perinatal_mortality = ifelse(diff_days < 7 | 
-                                   (RINPERSOONS == "D" & sterfte %in% c('Ante partum', 'Durante partum', 'Postpartum 0-7 dagen')), 1, 0),
-    # neonatal mortality: 24 weeks to < 28 days
-    neonatal_mortality = ifelse(diff_days < 28 | 
-                                  (RINPERSOONS == "D" & sterfte %in% c('Ante partum', 'Durante partum', 'Postpartum 0-7 dagen')), 1, 0),
+    # perinatal mortality: 24 weeks to <= 7 days
+    perinatal_mortality = ifelse(
+      diff_days <= 7 | (sterfte %in% c('Ante partum', 'Durante partum', 
+                                       'Postpartum 0-7 dagen')), 1, 0),
+    # neonatal mortality: 24 weeks to <= 28 days
+    neonatal_mortality = ifelse(
+      diff_days <= 28 | (sterfte %in% c('Ante partum', 'Durante partum', 
+                                       'Postpartum 0-7 dagen', 'Postpartum 8-28 dagen')), 1, 0),
     # infant mortality: 24 weeks to < 365 days
-    infant_mortality = ifelse(diff_days < 365 | 
-                                (RINPERSOONS == "D" & sterfte %in% c('Ante partum', 'Durante partum', 'Postpartum 0-7 dagen')), 1, 0), 
+    infant_mortality = ifelse(
+      diff_days < 365 | (sterfte %in% c('Ante partum', 'Durante partum', 
+                                        'Postpartum 0-7 dagen', 'Postpartum 8-28 dagen')), 1, 0), 
     # Remove NAs
     perinatal_mortality = ifelse(is.na(perinatal_mortality), 0, perinatal_mortality),
     neonatal_mortality = ifelse(is.na(neonatal_mortality), 0, neonatal_mortality),
     infant_mortality = ifelse(is.na(infant_mortality), 0, infant_mortality)
-    ) %>% 
-  select(-diff_days)
+    ) 
 
-
-# cohort_dat <-
-#   cohort_dat %>%
-#   mutate(
-#     # perinatal mortality: 24 weeks to < 7 days
-#     perinatal_mortality =
-#       ifelse(sterfte %in% c('Ante partum', 'Durante partum', 'Postpartum 0-7 dagen',
-#                             'Fase overlijden onduidelijk'), 1, 0),
-#     # neonatal mortality: 24 weeks to < 28 days
-#     neonatal_mortality =
-#       ifelse(sterfte %in% c('Ante partum', 'Durante partum', 'Postpartum 0-7 dagen',
-#                             'Fase overlijden onduidelijk', 'Postpartum 8-28 dagen'), 1, 0),
-#     # infant mortality: 24 weeks to < 365 days
-#     infant_mortality =
-#       ifelse(sterfte %in% c('Ante partum', 'Durante partum', 'Postpartum 0-7 dagen',
-#                             'Fase overlijden onduidelijk', 'Postpartum 8-28 dagen',
-#                             'Postpartum > 28 dagen'), 1, 0))
 
 
 #### BIG2 OUTCOMES ####
@@ -257,7 +247,7 @@ cohort_dat <-
   ungroup() 
 
 # record sample size
-sample_size <- sample_size %>% mutate(n_5_child_outcomes = nrow(cohort_dat))
+sample_size <- sample_size %>% mutate(n_4_child_outcomes = nrow(cohort_dat))
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))

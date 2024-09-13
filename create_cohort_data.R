@@ -7,7 +7,7 @@
 
 # input the desired config file here:
 # yml: main, students, high_school, elementary_school, classroom, 
-# perinatal, child_mortality
+# perinatal
 cohort <- "main"
 cfg_file <- paste0("config/", cohort, ".yml")
 
