@@ -7,7 +7,7 @@
 #   - Adding housing outcomes to the cohort.
 #   - Writing `scratch/03_outcomes.rds`.
 #
-# (c) ODISSEI Social Data Science team 2023
+# (c) ODISSEI Social Data Science team 2024
 
 
 
@@ -18,7 +18,6 @@ library(haven)
 library(readxl)
 
 
-
 #### CONFIGURATION ####
 
 # load main cohort dataset
@@ -26,6 +25,9 @@ cohort_dat <- read_rds(file.path(loc$scratch_folder, "02_predictors.rds")) %>%
 # create variable that reflects the year the child turned a specific age 
   mutate(year = year(birthdate %m+% years(cfg$outcome_age))) %>%
   ungroup()
+
+
+sample_size <- read_rds(file.path(loc$scratch_folder, "02_sample_size.rds"))
 
 
 # create a table with incomes at the cpi_base_year level
@@ -38,6 +40,74 @@ cpi_tab <- read_excel(loc$cpi_index_data) %>%
 cpi_tab <- cpi_tab %>%
   mutate(
     cpi = cpi / cpi_tab %>% filter(year == cfg$cpi_base_year) %>% pull(cpi) * 100)
+
+
+#### LIVE CONTINUOUSLY IN NL ####
+
+# We only include children who live continuously in the Netherlands 
+adres_path <- file.path(loc$data_folder, loc$gbaao_data)
+adres_tab  <- read_sav(adres_path) %>%
+  # select only children
+  filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
+  mutate(
+    RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
+    GBADATUMAANVANGADRESHOUDING = ymd(GBADATUMAANVANGADRESHOUDING),
+    GBADATUMEINDEADRESHOUDING = ymd(GBADATUMEINDEADRESHOUDING)
+  ) %>%
+  select(-c(SOORTOBJECTNUMMER, RINOBJECTNUMMER))
+
+
+# residency requirement for people between child_live_start and child_live_end
+residency_tab <- 
+  cohort_dat %>%
+  select(RINPERSOONS, RINPERSOON, birthdate) %>%
+  mutate(start_date = ymd(paste0(year(birthdate), "-01-01")) %m+% years(cfg$child_live_start), 
+         end_date = ymd(paste0(year(birthdate), "-12-31")) %m+% years(cfg$child_live_end),
+         cutoff_days = as.numeric(difftime(end_date, start_date, units = "days")) - 
+           cfg$child_live_slack_days) %>%
+  select(-birthdate)
+
+
+# throw out anything with an end date before start_date, and anything with a start date after end_date
+# then also set the start date of everything to start_date, and the end date of everything to end_date
+# then compute the time span of each record
+adres_tab <- 
+  adres_tab %>% 
+  inner_join(residency_tab, by = c("RINPERSOONS", "RINPERSOON")) %>%
+  filter(!(GBADATUMEINDEADRESHOUDING < start_date),
+         !(GBADATUMAANVANGADRESHOUDING > end_date)) %>%
+  mutate(
+    recordstart = as_date(ifelse(GBADATUMAANVANGADRESHOUDING < start_date, start_date, GBADATUMAANVANGADRESHOUDING)),
+    recordend   = as_date(ifelse(GBADATUMEINDEADRESHOUDING > end_date, end_date, GBADATUMEINDEADRESHOUDING)) ,
+    timespan    = difftime(recordend, recordstart, units = "days")
+  ) %>%
+  select(-c(GBADATUMAANVANGADRESHOUDING, GBADATUMEINDEADRESHOUDING, 
+            start_date, end_date))
+
+
+# group by person and sum the total number of days
+# then compute whether this person lived in the Netherlands continuously
+days_tab <- 
+  adres_tab %>% 
+  select(RINPERSOONS, RINPERSOON, timespan, cutoff_days) %>% 
+  mutate(timespan = as.numeric(timespan)) %>% 
+  group_by(RINPERSOONS, RINPERSOON, cutoff_days) %>% 
+  summarize(total_days = sum(timespan)) %>%  
+  mutate(continuous_living = total_days >= cutoff_days) %>% 
+  select(RINPERSOONS, RINPERSOON, continuous_living)
+
+# add to cohort and filter
+cohort_dat <- 
+  left_join(cohort_dat, days_tab, by = c("RINPERSOONS", "RINPERSOON")) %>% 
+  filter(continuous_living) %>% 
+  select(-continuous_living)
+
+# free up memory
+rm(adres_tab, days_tab, residency_tab)
+
+
+sample_size <- sample_size %>% mutate(n_5_child_residency = nrow(cohort_dat))
+
 
 
 ### CHILD HOUSEHOLD INCOME  ####
@@ -202,8 +272,8 @@ rm(income_household)
 cohort_dat <-
   cohort_dat %>%
   mutate(household_income = ifelse(household_income < 0, NA, household_income)) %>%
-  # remove income if income is NA or nan
-  filter(!is.na(household_income) | !is.nan(household_income))
+  # remove income if income is NA 
+  filter(!is.na(household_income))
 
 
 # compute income transformations
@@ -345,10 +415,6 @@ cohort_dat <-
   ) %>%
   select(-c(income_rank)) %>%
   ungroup()
-
-
-
-
 
 
 
@@ -777,7 +843,8 @@ wealth_child <-
   select(-cpi)
 
 
-cohort_dat <- cohort_dat %>% 
+cohort_dat <- 
+  cohort_dat %>% 
   left_join(wealth_child, by = c("RINPERSOONS", "RINPERSOON", "year"))
 
 rm(wealth_child)
@@ -789,19 +856,25 @@ cohort_dat <-
   mutate(
     debt        = ifelse(wealth >= 0, 0, abs(wealth)),
     debt        = ifelse(is.na(wealth), NA, debt), 
-    home_wealth = wealth - wealth_no_home)
+    home_wealth = wealth - wealth_no_home) %>%
+  filter(!is.na(wealth)) # remove wealth if wealth is NA 
+
 
 
 #### PROPERTY BOUGHT OR RENT ####
 
 # find home address
 adres_path <- file.path(loc$data_folder, loc$gbaao_data)
-adres_tab  <- read_sav(adres_path) %>% 
-  as_factor(only_labelled = TRUE, levels = "values") %>%
+adres_dat  <- read_sav(adres_path) %>% 
   mutate(
+    RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
+    SOORTOBJECTNUMMER = as_factor(SOORTOBJECTNUMMER, levels = "values"),
     GBADATUMAANVANGADRESHOUDING = ymd(GBADATUMAANVANGADRESHOUDING),
     GBADATUMEINDEADRESHOUDING = ymd(GBADATUMEINDEADRESHOUDING)
-  ) %>%
+  ) 
+
+adres_tab <- 
+  adres_dat %>%
   # take addresses that are still open on a specific date
   filter(GBADATUMAANVANGADRESHOUDING <= ymd(paste0(cfg$child_outcome_year_max, "-01-01")) &
            GBADATUMEINDEADRESHOUDING >= ymd(paste0(cfg$child_outcome_year_min, "-01-01"))) 
@@ -846,10 +919,12 @@ for (year in seq(as.integer(cfg$child_outcome_year_min), as.integer(cfg$child_ou
 adres_tab <- left_join(adres_tab, property_dat,
                        by = c("SOORTOBJECTNUMMER", "RINOBJECTNUMMER", "year"))
 
+
 cohort_dat <- 
   cohort_dat %>% 
   left_join(adres_tab %>% select(RINPERSOONS, RINPERSOON, TypeEigenaar), 
             by = c("RINPERSOONS", "RINPERSOON"))
+
 
 
 # create home owner dummy
@@ -944,106 +1019,25 @@ cohort_dat <-
          sum_gifts = ifelse(is.na(sum_gifts), 0, sum_gifts)) # code NA to 0
 
 
-#### TEENAGE BIRTH RATE ####
-
-
-# load kinderoudertab
-kindouder_dat <- read_sav(file.path(loc$data_folder, loc$kind_data),
-                          col_select = c("RINPERSOONS", "RINPERSOON",
-                                         "RINPERSOONSMa", "RINPERSOONMa")) %>%
-  as_factor(only_labelled = TRUE, levels = "values") %>%
-  filter(RINPERSOONMa %in% cohort_dat$RINPERSOON,
-         RINPERSOONS == "R") %>%
-  rename(RINPERSOONS_infant = RINPERSOONS,
-         RINPERSOON_infant = RINPERSOON)
-
-
-# load gba data
-gba_path <- file.path(loc$data_folder, loc$birth_dat)
-gba_dat <-
-  read_sav(gba_path, col_select = c("RINPERSOONS", "RINPERSOON", "GBAGEBOORTEJAAR",
-                                    "GBAGEBOORTEMAAND", "GBAGEBOORTEDAG")) %>%
-  mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
-         birthdate = dmy(paste(GBAGEBOORTEDAG, GBAGEBOORTEMAAND, GBAGEBOORTEJAAR, sep = "-"))) %>%
-  select(-GBAGEBOORTEJAAR, -GBAGEBOORTEMAAND, -GBAGEBOORTEDAG)
-
-
-# add infants birth date to cohort
-kindouder_dat <-
-  kindouder_dat %>%
-  left_join(gba_dat, by = c("RINPERSOONS_infant" = "RINPERSOONS",
-                            "RINPERSOON_infant" = "RINPERSOON")) %>%
-  rename(birthdate_infant = birthdate) %>%
-  select(-c(RINPERSOONS_infant, RINPERSOON_infant))
-
-# add mothers birth date
-kindouder_dat <-
-  kindouder_dat %>%
-  left_join(gba_dat, by = c("RINPERSOONSMa" = "RINPERSOONS",
-                            "RINPERSOONMa" = "RINPERSOON")) %>%
-  rename(birthdate_ma = birthdate)
-
-
-# create outcome for mothers age at birth
-kindouder_dat <-
-  kindouder_dat %>%
-  mutate(age_at_birth_ma = interval(birthdate_ma, birthdate_infant) / years(1)) %>%
-  select(-c(birthdate_ma, birthdate_infant)) %>%
-  arrange(RINPERSOONMa, age_at_birth_ma) %>%
-  group_by(RINPERSOONSMa, RINPERSOONMa) %>%
-  summarize(age_at_birth_ma = age_at_birth_ma[1])
-
-# create teenage birth outcome
-kindouder_dat <- 
-  kindouder_dat %>%
-  group_by(RINPERSOONSMa, RINPERSOONMa) %>%
-  summarize(teenage_birth = ifelse(age_at_birth_ma <= 25, 1, 0)) 
-
-
-cohort_dat <-
-  cohort_dat %>%
-  left_join(kindouder_dat,
-            by = c("RINPERSOONS" = "RINPERSOONSMa",
-                   "RINPERSOON" = "RINPERSOONMa"))
-
-rm(gba_dat, kindouder_dat)
-
-
-# convert teenage birth to 0 if female
-cohort_dat <-
-  cohort_dat %>%
-  mutate(teenage_birth = ifelse(geslacht == "Vrouwen" & is.na(teenage_birth), 
-                                0, teenage_birth))
-
-
-
-
 #### LIVING SPACE PER HOUSEHOLD MEMBER ####
 
 
-# load home addresses
-adres_tab <- read_sav(file.path(loc$data_folder, loc$gbaao_data)) %>%
-  mutate(
-    RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
-    SOORTOBJECTNUMMER = as_factor(SOORTOBJECTNUMMER, levels = "values"),
-    GBADATUMAANVANGADRESHOUDING = ymd(GBADATUMAANVANGADRESHOUDING),
-    GBADATUMEINDEADRESHOUDING = ymd(GBADATUMEINDEADRESHOUDING))
-
-
+# LIVING SPACE PP AT AGE 35
+   
+# select home addresses
 adres_tab <- 
-  adres_tab %>% 
-  # select only children
+  adres_dat %>% 
   filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>%
   filter(!(GBADATUMEINDEADRESHOUDING < ymd(paste0(cfg$child_outcome_year_min, "0101"))),
          !(GBADATUMAANVANGADRESHOUDING > ymd(paste0(cfg$child_outcome_year_max, "0101"))))
 
 
-# create 1 january variable 
+# create 1 january variable for current year the child is age 35 
 cohort_dat <- cohort_dat %>%
   mutate(january = ymd(paste0(year, "-01-01")))
 
 
-# add 1 januari data to adres tab to filter for home addresses at 1 jan
+# add 1 january data to adres tab to filter for home addresses at 1 jan
 adres_tab <- 
   adres_tab %>%
   left_join(cohort_dat %>% select(RINPERSOONS, RINPERSOON, january)) %>%
@@ -1051,19 +1045,25 @@ adres_tab <-
 
 # add home addresses to data
 cohort_dat <- left_join(cohort_dat, adres_tab %>% 
-                          select(RINPERSOONS, RINPERSOON, SOORTOBJECTNUMMER, RINOBJECTNUMMER),
+                          select(RINPERSOONS, RINPERSOON, 
+                                 SOORTOBJECTNUMMER, RINOBJECTNUMMER),
                         by = c("RINPERSOONS", "RINPERSOON"))
-rm(adres_tab)
+rm(adres_tab) 
+
 
 # LIVING SPACE 
 
 woon_dat <-
   read_sav(file.path(loc$data_folder, loc$woon_data),
            col_select = c("SOORTOBJECTNUMMER", "RINOBJECTNUMMER", "VBOOPPERVLAKTE", 
-                          "AANVLEVCYCLWOONNIETWOON", "EINDLEVCYCLWOONNIETWOON")) %>%
+                          "AANVLEVCYCLWOONNIETWOON", "EINDLEVCYCLWOONNIETWOON")
+           ) %>%
   mutate(SOORTOBJECTNUMMER = as_factor(SOORTOBJECTNUMMER, levels = "values"), 
-         AANVLEVCYCLWOONNIETWOON = ymd(AANVLEVCYCLWOONNIETWOON), 
-         EINDLEVCYCLWOONNIETWOON = ifelse(EINDLEVCYCLWOONNIETWOON == "88888888",
+         AANVLEVCYCLWOONNIETWOON = ymd(AANVLEVCYCLWOONNIETWOON))
+
+woon_tab <-
+  woon_dat %>%
+  mutate(EINDLEVCYCLWOONNIETWOON = ifelse(EINDLEVCYCLWOONNIETWOON == "88888888",
                                           paste0(cfg$child_outcome_year_max, "1231"),
                                           EINDLEVCYCLWOONNIETWOON),
          EINDLEVCYCLWOONNIETWOON = ymd(EINDLEVCYCLWOONNIETWOON)
@@ -1072,9 +1072,9 @@ woon_dat <-
          !(AANVLEVCYCLWOONNIETWOON > ymd(paste0(cfg$child_outcome_year_max, "-01-01"))))
 
 
-# add 1 januari data to woon tab to filter for home addresses at 1 jan
-woon_dat <- 
-  woon_dat %>%
+# add 1 january data to woon tab to filter for home addresses at 1 jan
+woon_tab <- 
+  woon_tab %>%
   left_join(cohort_dat %>% select(SOORTOBJECTNUMMER, RINOBJECTNUMMER, january), 
             by = c("SOORTOBJECTNUMMER", "RINOBJECTNUMMER")) %>%
   filter(january %within% interval(AANVLEVCYCLWOONNIETWOON, EINDLEVCYCLWOONNIETWOON)) %>%
@@ -1083,12 +1083,11 @@ woon_dat <-
 
 # add living space to data
 cohort_dat <- left_join(cohort_dat,
-                        woon_dat %>% select(SOORTOBJECTNUMMER, RINOBJECTNUMMER, VBOOPPERVLAKTE, january),
+                        woon_tab %>% select(SOORTOBJECTNUMMER, RINOBJECTNUMMER, VBOOPPERVLAKTE, january),
                         by = c("SOORTOBJECTNUMMER", "RINOBJECTNUMMER", "january"))  %>%
   mutate(VBOOPPERVLAKTE = as.numeric(VBOOPPERVLAKTE))
 
-rm(woon_dat)
-
+rm(woon_tab)
 
 
 
@@ -1121,13 +1120,14 @@ for (year in seq(as.integer(cfg$child_outcome_year_min), as.integer(cfg$child_ou
 }
 
 
-cohort_dat <- cohort_dat %>%
+cohort_dat <- 
+  cohort_dat %>%
   left_join(household_members, by = c("SOORTOBJECTNUMMER", "RINOBJECTNUMMER", "year")) %>%
   mutate(AantalBewoners = as.numeric(AantalBewoners),
          AantalBewoners = ifelse(AantalBewoners == 0, NA, AantalBewoners)) 
 
 
-# create living space per household member outcome
+# create living space per household member outcome at age 35
 cohort_dat <- 
   cohort_dat %>%
   mutate(living_space_pp = VBOOPPERVLAKTE / AantalBewoners) %>%
@@ -1136,6 +1136,188 @@ cohort_dat <-
 
 
 rm(household_members)
+
+
+# LIVING SPACE PP AT AGE 34 
+# create living space pp at age 34 for those who are NA at age 35 (NA = 12.899)
+
+# LIVING SPACE
+adres_tab <- 
+  adres_dat %>% 
+  # select only children
+  filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>%
+  filter(!(GBADATUMEINDEADRESHOUDING < ymd(paste0((cfg$child_outcome_year_min - 1), "0101"))),
+         !(GBADATUMAANVANGADRESHOUDING > ymd(paste0((cfg$child_outcome_year_max - 1), "0101"))))
+
+
+# create 1 january variable for current year the child is age 34 
+cohort_dat <- 
+  cohort_dat %>%
+  mutate(january = ymd(paste0((year - 1), "-01-01")))
+
+
+# add 1 january data to adres tab to filter for home addresses at 1 jan
+adres_tab <- 
+  adres_tab %>%
+  left_join(cohort_dat %>% select(RINPERSOONS, RINPERSOON, january)) %>%
+  filter(january %within% interval(GBADATUMAANVANGADRESHOUDING, GBADATUMEINDEADRESHOUDING)) 
+
+
+# add home addresses to data
+cohort_dat <- left_join(cohort_dat, adres_tab %>% 
+                          select(RINPERSOONS, RINPERSOON, SOORTOBJECTNUMMER, RINOBJECTNUMMER),
+                        by = c("RINPERSOONS", "RINPERSOON"))
+rm(adres_tab)
+
+
+# living space at age 34
+woon_tab <-
+  woon_dat %>%
+  mutate(EINDLEVCYCLWOONNIETWOON = ifelse(EINDLEVCYCLWOONNIETWOON == "88888888",
+                                          paste0(cfg$child_outcome_year_max, "1231"),
+                                          EINDLEVCYCLWOONNIETWOON),
+         EINDLEVCYCLWOONNIETWOON = ymd(EINDLEVCYCLWOONNIETWOON)
+  ) %>%
+  filter(!(EINDLEVCYCLWOONNIETWOON < ymd(paste0((cfg$child_outcome_year_min - 1), "-01-01"))),
+         !(AANVLEVCYCLWOONNIETWOON > ymd(paste0((cfg$child_outcome_year_max - 1), "-01-01"))))
+
+
+# add 1 january data to woon tab to filter for home addresses at 1 jan
+woon_tab <- 
+  woon_tab %>%
+  left_join(cohort_dat %>% select(SOORTOBJECTNUMMER, RINOBJECTNUMMER, january), 
+            by = c("SOORTOBJECTNUMMER", "RINOBJECTNUMMER")) %>%
+  filter(january %within% interval(AANVLEVCYCLWOONNIETWOON, EINDLEVCYCLWOONNIETWOON)) %>%
+  unique()
+
+
+# add living space to data
+cohort_dat <- left_join(cohort_dat,
+                        woon_tab %>% select(SOORTOBJECTNUMMER, RINOBJECTNUMMER, VBOOPPERVLAKTE, january),
+                        by = c("SOORTOBJECTNUMMER", "RINOBJECTNUMMER", "january"))  %>%
+  mutate(VBOOPPERVLAKTE = as.numeric(VBOOPPERVLAKTE))
+
+rm(woon_tab)
+
+
+
+# NUMBER OF HOUSEHOLD MEMBERS
+household_members <- tibble(SOORTOBJECTNUMMER = factor(), RINOBJECTNUMMER = character(), 
+                            AantalBewoners = double(), year = integer())
+for (year in seq(as.integer(cfg$child_outcome_year_min - 1), 
+                 as.integer(cfg$child_outcome_year_max - 1))) {
+  
+  household_members <- read_sav(get_eigendom_filename(year), 
+                                col_select = c("SOORTOBJECTNUMMER", "RINOBJECTNUMMER",
+                                               "AantalBewoners")) %>%
+    mutate(SOORTOBJECTNUMMER = as_factor(SOORTOBJECTNUMMER, levels = "values"),
+           AantalBewoners = as.numeric(AantalBewoners),
+           year = year) %>%
+    # add to household member dat
+    bind_rows(household_members, .)
+}
+
+
+cohort_dat <- 
+  cohort_dat %>%
+  left_join(household_members, by = c("SOORTOBJECTNUMMER", "RINOBJECTNUMMER", "year")) %>%
+  mutate(AantalBewoners = as.numeric(AantalBewoners),
+         AantalBewoners = ifelse(AantalBewoners == 0, NA, AantalBewoners)) 
+
+
+# create living space per household member outcome at age 34
+cohort_dat <- 
+  cohort_dat %>%
+  mutate(living_space_pp = ifelse(is.na(living_space_pp), 
+                                  VBOOPPERVLAKTE / AantalBewoners, living_space_pp)) %>%
+  select(-c(january, VBOOPPERVLAKTE, AantalBewoners))
+
+
+rm(household_members)
+
+
+#### AGE LEFT PARENTS ####
+# load household data
+household_dat <-
+  read_sav(file.path(loc$data_folder, loc$household_data),
+           col_select = c("RINPERSOONS", "RINPERSOON", "DATUMAANVANGHH",
+                          "DATUMEINDEHH", "PLHH")) %>%
+  filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>%
+  mutate(
+    RINPERSOONS = as_factor(RINPERSOONS, levels = "value"),
+    DATUMAANVANGHH = as.numeric(DATUMAANVANGHH),
+    DATUMEINDEHH = as.numeric(DATUMEINDEHH),
+    PLHH = as_factor(PLHH, levels = "value")
+  ) %>%
+  mutate(
+    DATUMAANVANGHH = ymd(DATUMAANVANGHH),
+    DATUMEINDEHH = ymd(DATUMEINDEHH)
+  )                                                                                 
+
+# select the age at which children left their parents home
+hh_dat <- tibble(RINPERSOONS = cohort_dat$RINPERSOONS, 
+                 RINPERSOON = cohort_dat$RINPERSOON) %>%
+  mutate (age = 35)
+
+for(year in seq(cfg$outcome_age, cfg$childhood_home_age)) {
+  age_tab <- cohort_dat %>%
+    select(RINPERSOONS, RINPERSOON, birthdate) %>%
+    mutate(home_address_date = birthdate %m+% years(year)) %>%
+    select(-birthdate)
+  
+  hh_tab <- 
+    household_dat %>%
+    left_join(age_tab, by = c("RINPERSOONS", "RINPERSOON")) %>%
+    group_by(RINPERSOONS, RINPERSOON) %>% 
+    filter(DATUMAANVANGHH <= home_address_date & 
+             DATUMEINDEHH >= home_address_date) %>%
+    summarize(PLHH = as.numeric(PLHH[1]))
+  
+  # for children with missing observation on birthday, find the next available registration within one year 
+  hh_tab_missing <-
+    household_dat %>%
+    left_join(age_tab, by = c("RINPERSOONS", "RINPERSOON")) %>%
+    mutate(pl_missing = if_else((RINPERSOON %in% hh_tab$RINPERSOON), 0, 1)) %>%
+    filter (pl_missing == 1) %>% 
+    group_by(RINPERSOONS, RINPERSOON) %>%
+    filter(DATUMAANVANGHH > home_address_date) %>%
+    summarise(
+      PLHH = as.numeric(PLHH[1]),
+      birthday = home_address_date[1],
+      date_PLHH = DATUMAANVANGHH[1]) %>%
+    mutate(missing = if_else((date_PLHH-birthday > 365),1,0)) %>%
+    filter(missing == 0) %>%
+    select(RINPERSOON, RINPERSOONS, PLHH)
+  
+  hh_tab <- rbind (hh_tab, hh_tab_missing)
+  
+  hh_dat <- 
+    hh_dat %>%
+    left_join (hh_tab, by = c("RINPERSOONS", "RINPERSOON")) 
+  
+  hh_dat <- 
+    hh_dat %>%
+    mutate (living_at_home = if_else(PLHH == (1 | 10)  | is.na(PLHH), 1, 0)) %>% 
+    mutate (age = if_else(living_at_home == 1 | is.na(living_at_home), age, year)) %>%
+    select (-c(PLHH))
+}  
+
+
+cohort_dat <- left_join(cohort_dat, hh_dat %>% 
+                          select(-living_at_home)%>%
+                          rename (age_left_parents = age),
+                        by = c("RINPERSOONS", "RINPERSOON")) %>%
+  select(-c(SOORTOBJECTNUMMER, RINOBJECTNUMMER))
+
+
+
+# free up memory
+rm(hh_tab, hh_tab_missing, age_tab, household_dat, hh_dat)
+
+
+# recording sample size
+sample_size <- sample_size %>% mutate(n_6_child_outcomes = nrow(cohort_dat))
+
 
 
 
@@ -1147,8 +1329,8 @@ outcomes <- c("income", "income_perc", "hbo_attained", "wo_attained", "hourly_wa
               "hourly_wage_max_14", "employed", "social_assistance",  "disability", 
               "total_health_costs", "basic_mhc", "specialist_mhc", "hospital", 
               "pharma", "debt", "wealth", "wealth_no_home", "home_wealth", "homeowner",
-              "gifts_received", "teenage_birth", "household_income", 
-              "household_income_perc", "living_space_pp", "sum_gifts")
+              "gifts_received", "household_income", "household_income_perc", 
+              "living_space_pp", "sum_gifts", "age_left_parents")
 suffix <- "c30_"
 
 
@@ -1163,5 +1345,7 @@ cohort_dat <-
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
 
-
+#write sample size reduction table to scratch
+sample_size <- sample_size %>% mutate(cohort_name = cohort)
+write_rds(sample_size, file.path(loc$scratch_folder, "03_sample_size.rds"))
 

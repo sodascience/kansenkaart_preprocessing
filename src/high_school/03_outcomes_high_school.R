@@ -3,8 +3,7 @@
 # 3. Outcome creation.
 #   - Adding high school education outcomes to the cohort.
 #
-# (c) ODISSEI Social Data Science team 2023
-
+# (c) ODISSEI Social Data Science team 2024
 
 
 #### PACKAGES ####
@@ -13,9 +12,79 @@ library(lubridate)
 library(haven)
 library(readxl)
 
+
 #### CONFIGURATION ####
 # load main cohort dataset
 cohort_dat <- read_rds(file.path(loc$scratch_folder, "02_predictors.rds"))
+
+sample_size <- read_rds(file.path(loc$scratch_folder, "02_sample_size.rds"))
+
+
+
+#### LIVE CONTINUOUSLY IN NL ####
+
+# We only include children who live continuously in the Netherlands 
+adres_path <- file.path(loc$data_folder, loc$gbaao_data)
+adres_tab  <- read_sav(adres_path) %>%
+  # select only children
+  filter(RINPERSOON %in% cohort_dat$RINPERSOON) %>% 
+  mutate(
+    RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
+    GBADATUMAANVANGADRESHOUDING = ymd(GBADATUMAANVANGADRESHOUDING),
+    GBADATUMEINDEADRESHOUDING = ymd(GBADATUMEINDEADRESHOUDING)
+  ) %>%
+  select(-c(SOORTOBJECTNUMMER, RINOBJECTNUMMER))
+
+
+# residency requirement for people between child_live_start and child_live_end
+residency_tab <- 
+  cohort_dat %>%
+  select(RINPERSOONS, RINPERSOON, birthdate) %>%
+  mutate(start_date = ymd(paste0(year(birthdate), "-01-01")) %m+% years(cfg$child_live_age), 
+         end_date = ymd(paste0(year(birthdate), "-12-31")) %m+% years(cfg$child_live_age),
+         cutoff_days = as.numeric(difftime(end_date, start_date, units = "days")) - 
+           cfg$child_live_slack_days) %>%
+  select(-birthdate)
+
+
+# throw out anything with an end date before start_date, and anything with a start date after end_date
+# then also set the start date of everything to start_date, and the end date of everything to end_date
+# then compute the timespan of each record
+adres_tab <- 
+  adres_tab %>% 
+  inner_join(residency_tab, by = c("RINPERSOONS", "RINPERSOON")) %>%
+  filter(!(GBADATUMEINDEADRESHOUDING < start_date),
+         !(GBADATUMAANVANGADRESHOUDING > end_date)) %>%
+  mutate(
+    recordstart = as_date(ifelse(GBADATUMAANVANGADRESHOUDING < start_date, start_date, GBADATUMAANVANGADRESHOUDING)),
+    recordend   = as_date(ifelse(GBADATUMEINDEADRESHOUDING > end_date, end_date, GBADATUMEINDEADRESHOUDING)) ,
+    timespan    = difftime(recordend, recordstart, units = "days")
+  ) %>%
+  select(-c(GBADATUMAANVANGADRESHOUDING, GBADATUMEINDEADRESHOUDING, 
+            start_date, end_date))
+
+# group by person and sum the total number of days
+# then compute whether this person lived in the Netherlands continuously
+days_tab <- 
+  adres_tab %>% 
+  select(RINPERSOONS, RINPERSOON, timespan, cutoff_days) %>% 
+  mutate(timespan = as.numeric(timespan)) %>% 
+  group_by(RINPERSOONS, RINPERSOON, cutoff_days) %>% 
+  summarize(total_days = sum(timespan)) %>%  
+  mutate(continuous_living = total_days >= cutoff_days) %>% 
+  select(RINPERSOONS, RINPERSOON, continuous_living)
+
+# add to cohort and filter
+cohort_dat <- 
+  left_join(cohort_dat, days_tab, by = c("RINPERSOONS", "RINPERSOON")) %>% 
+  filter(continuous_living) %>% 
+  select(-continuous_living)
+
+# free up memory
+rm(adres_tab, days_tab, residency_tab)
+
+sample_size <- sample_size %>% 
+  mutate(n_5_child_residency = nrow(cohort_dat))
 
 
 # create a table with incomes at the cpi_base_year level
@@ -28,7 +97,6 @@ cpi_tab <- read_excel(loc$cpi_index_data) %>%
 cpi_tab <- cpi_tab %>%
   mutate(
     cpi = cpi / cpi_tab %>% filter(year == cfg$cpi_base_year) %>% pull(cpi) * 100)
-
 
 
 #### HIGH SCHOOL ####
@@ -85,7 +153,7 @@ cohort_dat <- cohort_dat %>%
 
 
 cohort_dat <- inner_join(cohort_dat, school_dat, 
-                        by = c("RINPERSOON", "RINPERSOONS", "year"))
+                         by = c("RINPERSOON", "RINPERSOONS", "year"))
 
 
 # create dummy variables
@@ -199,7 +267,7 @@ health_dat <-
 
 # add to data
 cohort_dat <- left_join(cohort_dat, health_dat, 
-                      by = c("RINPERSOONS", "RINPERSOON", "year"))
+                        by = c("RINPERSOONS", "RINPERSOON", "year"))
 
 rm(health_dat)
 
@@ -261,17 +329,117 @@ cohort_dat <-
   cohort_dat %>%
   mutate(youth_protection = ifelse(is.na(youth_protection), 0, youth_protection))
 
-
-#### LIVING SPACE PER HOUSEHOLD MEMBER ####
-
-
-# load home addresses
+## update address of kids under child protection ##
 adres_tab <- read_sav(file.path(loc$data_folder, loc$gbaao_data)) %>%
   mutate(
     RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
     SOORTOBJECTNUMMER = as_factor(SOORTOBJECTNUMMER, levels = "values"),
     GBADATUMAANVANGADRESHOUDING = ymd(GBADATUMAANVANGADRESHOUDING),
     GBADATUMEINDEADRESHOUDING = ymd(GBADATUMEINDEADRESHOUDING))
+
+# identify children under child protection, their birthdate and their mother.
+protection_tab <- cohort_dat %>%
+  filter(youth_protection == 1) %>%
+  select(RINPERSOON, birthdate, RINPERSOONMa) %>%
+  rename("RINPERSOON_kind" = "RINPERSOON")
+
+# get home address of mother (at time of child's birth) of kids who are under child protection
+birth_adres <- adres_tab %>% 
+  filter(RINPERSOON %in% protection_tab$RINPERSOONMa) %>%
+  left_join(protection_tab, by = c("RINPERSOON" = "RINPERSOONMa"), relationship = "many-to-many") %>%
+  filter(birthdate %within% interval(GBADATUMAANVANGADRESHOUDING, GBADATUMEINDEADRESHOUDING)) %>%
+  group_by(RINPERSOON_kind, RINPERSOON) %>%
+  summarise(childhood_home = RINOBJECTNUMMER[1],
+            type_childhood_home = SOORTOBJECTNUMMER[1]) %>%
+  select(-RINPERSOON) %>%
+  rename("RINPERSOON" = "RINPERSOON_kind")
+
+vslpc_path <- file.path(loc$data_folder, loc$postcode_data)
+vslpc_tab  <- read_sav(vslpc_path) %>%
+  mutate(
+    SOORTOBJECTNUMMER = as_factor(SOORTOBJECTNUMMER, levels = "values"),
+    DATUMAANVPOSTCODENUMADRES = ymd(DATUMAANVPOSTCODENUMADRES),
+    DATUMEINDPOSTCODENUMADRES = ymd(DATUMEINDPOSTCODENUMADRES),
+    POSTCODENUM = ifelse(POSTCODENUM == "----", NA, POSTCODENUM)
+  ) %>%
+  filter(!is.na(POSTCODENUM))
+
+# only consider postal codes valid on target_date and create postcode-3 level
+vslpc_tab <- 
+  vslpc_tab %>% 
+  filter(dmy(cfg$postcode_target_date) %within% interval(DATUMAANVPOSTCODENUMADRES, DATUMEINDPOSTCODENUMADRES)) %>% 
+  mutate(postcode3 = as.character(floor(as.numeric(POSTCODENUM)/10))) %>% 
+  select(SOORTOBJECTNUMMER, RINOBJECTNUMMER, postcode4 = POSTCODENUM, postcode3)
+
+# add the postal codes to the group of kids under youth protection 
+birth_adres <- inner_join(birth_adres, vslpc_tab, 
+                          by = c("type_childhood_home" = "SOORTOBJECTNUMMER", 
+                                 "childhood_home" = "RINOBJECTNUMMER"))
+
+# add region/neighbourhood codes to the group of kids under youth protection 
+vslgwb_path <- file.path(loc$data_folder, loc$vslgwb_data) 
+vslgwb_tab  <- read_sav(vslgwb_path) %>%
+  mutate(SOORTOBJECTNUMMER = as_factor(SOORTOBJECTNUMMER, levels = "values"))
+
+# select region/neighbourhood from the target date
+vslgwb_tab <- 
+  vslgwb_tab %>% 
+  select("type_childhood_home" = "SOORTOBJECTNUMMER", 
+         "childhood_home"      = "RINOBJECTNUMMER", 
+         "gemeente_code"       = paste0("gem", year(dmy(cfg$gwb_target_date))), 
+         "wijk_code"           = paste0("wc", year(dmy(cfg$gwb_target_date))), 
+         "buurt_code"          = paste0("bc", year(dmy(cfg$gwb_target_date))))
+
+birth_adres <- inner_join(birth_adres, vslgwb_tab)
+
+# add corop regions
+corop_tab  <- read_excel(loc$corop_data) %>%
+  select("gemeente_code" = paste0("GM", year(dmy(cfg$corop_target_date))), 
+         "corop_code" = paste0("COROP", year(dmy(cfg$corop_target_date)))) %>%
+  unique()
+
+birth_adres <- left_join(birth_adres, corop_tab, by = "gemeente_code") %>%
+  select(-c(type_childhood_home, childhood_home))
+
+# rename variables 
+birth_adres <- 
+  birth_adres %>% 
+  mutate(across(c("postcode3", "postcode4", "gemeente_code", 
+                  "wijk_code", "buurt_code", "corop_code"), as.character)) %>%
+  rename("postcode3_" = "postcode3",
+         "postcode4_" = "postcode4", 
+         "gemeente_code_" = "gemeente_code",
+         "wijk_code_" = "wijk_code", 
+         "buurt_code_" = "buurt_code", 
+         "corop_code_" = "corop_code")
+
+# merge to cohort data and only change the address of kids under youth protection. 
+# discard records of those without address information and transform variables to factor.
+cohort_dat <- left_join(cohort_dat, birth_adres, by = "RINPERSOON") %>% 
+  mutate(postcode3 = case_when(youth_protection == 1 ~ postcode3_, youth_protection == 0 ~ postcode3),
+         postcode4 = case_when(youth_protection == 1 ~ postcode4_, youth_protection == 0 ~ postcode4),
+         gemeente_code = case_when(youth_protection == 1 ~ gemeente_code_, youth_protection == 0 ~ gemeente_code),
+         wijk_code = case_when(youth_protection == 1 ~ wijk_code_, youth_protection == 0 ~ wijk_code),
+         buurt_code = case_when(youth_protection == 1 ~ buurt_code_, youth_protection == 0 ~ buurt_code),
+         corop_code = case_when(youth_protection == 1 ~ corop_code_, youth_protection == 0 ~ corop_code)) %>%
+  filter(!is.na(postcode3)) %>%
+  select(-c(postcode3_, postcode4_, gemeente_code_, wijk_code_, buurt_code_, corop_code_)) %>%
+  mutate(across(c("postcode3", "postcode4", "gemeente_code", 
+                  "wijk_code", "buurt_code", "corop_code"), as.factor))
+
+rm(birth_adres, corop_tab, protection_tab, vslgwb_tab, vslpc_tab)
+
+
+#### LIVING SPACE PER HOUSEHOLD MEMBER ####
+
+
+# load home addresses
+# adres_tab <- read_sav(file.path(loc$data_folder, loc$gbaao_data)) %>%
+#   mutate(
+#     RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
+#     SOORTOBJECTNUMMER = as_factor(SOORTOBJECTNUMMER, levels = "values"),
+#     GBADATUMAANVANGADRESHOUDING = ymd(GBADATUMAANVANGADRESHOUDING),
+#     GBADATUMEINDEADRESHOUDING = ymd(GBADATUMEINDEADRESHOUDING))
 
 
 adres_tab <- 
@@ -384,11 +552,267 @@ cohort_dat <- cohort_dat %>%
 rm(household_members)
 
 
+
+#### PRIMARY SCHOOL CLASS COMPOSITION ####
+# load class cohort data
+class_cohort_dat <- read_rds(file.path(loc$scratch_folder, "class_cohort.rds"))
+
+# combine the main sample and class sample
+class_cohort_dat <- bind_rows(
+  class_cohort_dat %>% select ("RINPERSOON", "RINPERSOONS", "GBAGEBOORTELANDMOEDER", "GBAGEBOORTELANDVADER", "income_parents_perc"), 
+  cohort_dat %>% select ("RINPERSOON", "RINPERSOONS", "GBAGEBOORTELANDMOEDER", "GBAGEBOORTELANDVADER", "income_parents_perc"), 
+)
+
+
+# function to get latest inschrwpo version of specified year
+get_inschrwpo_filename <- function(year) {
+  fl <- list.files(
+    path = file.path(loc$data_folder, "Onderwijs/INSCHRWPOTAB"),
+    pattern = paste0("INSCHRWPOTAB", year, "V[0-9]+(?i)(.sav)"), 
+    full.names = TRUE
+  )
+  # return only the latest version
+  sort(fl, decreasing = TRUE)[1]
+}
+
+school_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), WPOLEERJAAR = character(), 
+                     WPOBRIN_crypt = character(), WPOBRINVEST = character(), WPOTYPEPO = character())
+
+for (year in seq(as.integer(cfg$primary_classroom_year_min), as.integer(cfg$primary_classroom_year_max))) {
+  school_dat <- 
+    # read file from disk
+    read_sav(get_inschrwpo_filename(year), 
+             col_select = c("RINPERSOONS", "RINPERSOON", "WPOLEERJAAR", 
+                            "WPOBRIN_crypt", "WPOBRINVEST", "WPOTYPEPO")) %>% 
+    mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value")) %>%
+    # add year
+    mutate(year = year) %>% 
+    # add to income children
+    bind_rows(school_dat, .)
+}
+
+# keep group 8 pupils
+school_dat <- school_dat %>%
+  filter(RINPERSOONS == "R") %>%
+  mutate(WPOLEERJAAR = trimws(as.character(WPOLEERJAAR))) %>%
+  filter(WPOLEERJAAR == "8") %>%
+  select(-WPOLEERJAAR)
+
+
+# link to classroom sample
+school_dat <- school_dat %>%
+  left_join(class_cohort_dat, 
+            by = c("RINPERSOON", "RINPERSOONS"))%>%
+  # drop all children who are not in the large classroom sample 
+  filter(!is.na(income_parents_perc))
+
+# primary school ID
+school_dat <- school_dat %>%
+  mutate(across(c("WPOBRIN_crypt", "WPOBRINVEST"), as.character)) %>%
+  mutate(school_ID = paste0(WPOBRIN_crypt, WPOBRINVEST)) %>%
+  select(-c(WPOBRIN_crypt, WPOBRINVEST))
+
+
+# create parents rank income outcomes
+school_dat <- school_dat %>%
+  mutate(
+    # create dummy for below 25th 
+    income_below_25th = ifelse(income_parents_perc < 0.25, 1, 0),
+    # create dummy for below 50th 
+    income_below_50th = ifelse(income_parents_perc < 0.50, 1, 0),
+    # create dummy for above 75th
+    income_above_75th = ifelse(income_parents_perc > 0.75, 1, 0)
+  )
+
+
+# create outcome for children with both parents born in a foreign country
+school_dat <- school_dat %>%
+  mutate(
+    GBAGEBOORTELANDMOEDER = as_factor(GBAGEBOORTELANDMOEDER),
+    GBAGEBOORTELANDVADER = as_factor(GBAGEBOORTELANDVADER)
+  ) %>%
+  mutate(
+    foreign_born_parents = 
+      ifelse((GBAGEBOORTELANDMOEDER != "Nederland" & 
+                GBAGEBOORTELANDVADER != "Nederland"),  1, 0))
+
+
+# classroom outcomes: class_foreign_born_parents, class_parents_below_25, class_parents_below_50, class_parents_above_75
+
+# only keep classes with more than one student per class
+school_dat <- school_dat %>%
+  group_by(school_ID, year) %>%
+  mutate(n = n()) %>%
+  filter(n > 1)
+
+
+# hold out mean function
+hold_out_means <- function(x) {
+  hold <- ((sum(x, na.rm = TRUE) - x) / (length(x) - 1))
+  return(hold)
+}
+
+
+
+# hold out means = mean of the class without the child him/herself
+school_dat <- school_dat %>%
+  group_by(school_ID, year) %>%
+  mutate(
+    #    primary_N_students_per_school = n(),
+    primary_class_foreign_born_parents = hold_out_means(foreign_born_parents),
+    primary_class_income_below_25th = hold_out_means(income_below_25th),
+    primary_class_income_below_50th = hold_out_means(income_below_50th),
+    primary_class_income_above_75th = hold_out_means(income_above_75th)
+  ) 
+
+
+# keep unique observations,for duplicates select the last time the child is in 8th grade
+school_dat <- school_dat %>%
+  arrange(desc(year)) %>%
+  group_by(RINPERSOONS, RINPERSOON) %>%
+  filter(row_number() == 1)
+
+# add to outcomes to cohort
+cohort_dat <- cohort_dat %>%
+  left_join (school_dat %>% 
+               select(RINPERSOONS, RINPERSOON, primary_class_foreign_born_parents, primary_class_income_below_25th, primary_class_income_below_50th, primary_class_income_above_75th),
+             by = c("RINPERSOONS", "RINPERSOON"))
+
+rm(school_dat)
+
+#### SECONDARY SCHOOL CLASS COMPOSITION ####
+
+# function to get latest ONDERWIJSINSCHRTAB version of specified year
+get_school_filename <- function(year) {
+  fl <- list.files(
+    path = file.path(loc$data_folder, "Onderwijs/ONDERWIJSINSCHRTAB"),
+    pattern = paste0("ONDERWIJSINSCHRTAB", year, "V[0-9]+(?i)(.sav)"), 
+    full.names = TRUE
+  )
+  # return only the latest version
+  sort(fl, decreasing = TRUE)[1]
+}
+
+
+school_dat <- tibble(RINPERSOONS = factor(), RINPERSOON = character(), OPLNR = character(), VOLEERJAAR = character(), 
+                     BRIN_crypt = character(), VOBRINVEST = character())
+
+for (year in seq(as.integer(cfg$secondary_classroom_year_min ),as.integer(cfg$secondary_classroom_year_max))) {
+  school_dat <- 
+    # read file from disk
+    read_sav(get_school_filename(year), 
+             col_select = c("RINPERSOONS", "RINPERSOON","OPLNR", "VOLEERJAAR", 
+                            "BRIN_crypt", "VOBRINVEST")) %>% 
+    mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "value")) %>%
+    # add year
+    mutate(year = year) %>% 
+    # add to income children
+    bind_rows(school_dat, .)
+}
+
+# keep those in grade 4 of secondary school 
+school_dat <- school_dat %>%
+  filter(VOLEERJAAR == "4", 
+         RINPERSOONS == "R",
+         !is.na(RINPERSOON)) 
+
+# find the level of secondary school 
+school_level <- read_sav(loc$opleiding_data) %>% 
+  select(OPLNR, ONDERWIJSSOORTVO)
+
+school_dat <- school_dat %>%
+  left_join(school_level, by = "OPLNR") %>%
+  rename(school_level = ONDERWIJSSOORTVO )
+
+
+# link to classroom sample
+school_dat <- school_dat %>%
+  left_join(class_cohort_dat, 
+            by = c("RINPERSOON", "RINPERSOONS"))%>%
+  # drop all children who are not in the classroom sample 
+  filter(!is.na(income_parents_perc))
+
+
+# generate secondary school ID
+school_dat <- school_dat %>%
+  mutate(across(c("BRIN_crypt", "VOBRINVEST"), as.character)) %>%
+  mutate(school_ID = paste0(BRIN_crypt, VOBRINVEST)) %>%
+  select(-c(BRIN_crypt, VOBRINVEST))
+
+
+# create parents rank income outcomes
+school_dat <- school_dat %>%
+  mutate(
+    # create dummy for below 25th 
+    income_below_25th = ifelse(income_parents_perc < 0.25, 1, 0),
+    # create dummy for below 50th 
+    income_below_50th = ifelse(income_parents_perc < 0.50, 1, 0),
+    # create dummy for above 75th
+    income_above_75th = ifelse(income_parents_perc > 0.75, 1, 0)
+  )
+
+
+# create outcome for children with both parents born in a foreign country
+school_dat <- school_dat %>%
+  mutate(
+    GBAGEBOORTELANDMOEDER = as_factor(GBAGEBOORTELANDMOEDER),
+    GBAGEBOORTELANDVADER = as_factor(GBAGEBOORTELANDVADER)
+  ) %>%
+  mutate(
+    foreign_born_parents = 
+      ifelse((GBAGEBOORTELANDMOEDER != "Nederland" & 
+                GBAGEBOORTELANDVADER != "Nederland"),  1, 0))
+
+
+# classroom outcomes: class_foreign_born_parents, class_parents_below_25, class_parents_below_50, class_parents_above_75
+
+# only keep classes with more than one student per class
+school_dat <- school_dat %>%
+  group_by(school_ID, year, school_level) %>%
+  mutate(n = n()) %>%
+  filter(n > 1)
+
+
+
+# hold out means = mean of the class without the child him/herself
+school_dat <- school_dat %>%
+  group_by(school_ID, year, school_level) %>%
+  mutate(
+    #    secondary_class_N_students_per_school = n(),
+    secondary_class_foreign_born_parents = hold_out_means(foreign_born_parents),
+    secondary_class_income_below_25th = hold_out_means(income_below_25th),
+    secondary_class_income_below_50th = hold_out_means(income_below_50th),
+    secondary_class_income_above_75th = hold_out_means(income_above_75th)
+  ) 
+
+
+# keep unique observations,for duplicates select the last time the child is in 8th grade
+school_dat <- school_dat %>%
+  arrange(desc(year)) %>%
+  group_by(RINPERSOONS, RINPERSOON) %>%
+  filter(row_number() == 1)
+
+
+# add to outcomes to cohort
+cohort_dat <- cohort_dat %>%
+  left_join (school_dat %>% 
+               select(RINPERSOONS, RINPERSOON, secondary_class_foreign_born_parents, secondary_class_income_below_25th, secondary_class_income_below_50th, secondary_class_income_above_75th),
+             by = c("RINPERSOONS", "RINPERSOON"))
+
+rm(school_dat, class_cohort_dat)
+
+
 #### PREFIX ####
 
 # add prefix to outcomes
 outcomes <- c("vmbo_gl", "havo", "vwo", 
-              "youth_health_costs", "youth_protection", "living_space_pp")
+              "youth_health_costs", "youth_protection", "living_space_pp", 
+              
+              "primary_class_foreign_born_parents", "primary_class_income_below_25th", 
+              "primary_class_income_below_50th", "primary_class_income_above_75th",
+              
+              "secondary_class_foreign_born_parents", "secondary_class_income_below_25th", 
+              "secondary_class_income_below_50th", "secondary_class_income_above_75th")
 suffix <- "c16_"
 
 
@@ -396,9 +820,18 @@ suffix <- "c16_"
 cohort_dat <- 
   cohort_dat %>%
   rename_with(~str_c(suffix, .), .cols = all_of(outcomes)) %>% 
-  ungroup() 
+  ungroup() %>%
+  #remove parents birth country
+  select(-c(GBAGEBOORTELANDMOEDER, GBAGEBOORTELANDVADER))
+
+sample_size <- sample_size %>% 
+  mutate(n_6_child_outcomes = nrow(cohort_dat))
 
 
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "03_outcomes.rds"))
 
+
+#write sample size reduction table to scratch
+sample_size <- sample_size %>% mutate(cohort_name = cohort)
+write_rds(sample_size, file.path(loc$scratch_folder, "03_sample_size.rds"))

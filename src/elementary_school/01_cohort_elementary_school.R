@@ -6,7 +6,7 @@
 #   - Adding postal code / region information to the cohort.
 #   - Writing `scratch/01_cohort.rds`.
 #
-# (c) ODISSEI Social Data Science team 2022
+# (c) ODISSEI Social Data Science team 2024
 
 
 #### PACKAGES ####
@@ -21,8 +21,9 @@ library(dplyr)
 gba_path <- file.path(loc$data_folder, loc$gba_data)
 gba_dat <-  
   read_sav(gba_path, col_select = c("RINPERSOONS", "RINPERSOON", "GBAGESLACHT", 
-                                    "GBAGEBOORTEJAAR", "GBAGEBOORTEMAAND", "GBAGEBOORTEDAG", "GBAGENERATIE", 
-                                    "GBAHERKOMSTGROEPERING")) %>% 
+                                    "GBAGEBOORTEJAAR", "GBAGEBOORTEMAAND", "GBAGEBOORTEDAG", "GBAGENERATIE", "GBAHERKOMSTGROEPERING",
+                                    #add parents birth country for adding foreign born parents outcome later 
+                                    "GBAGEBOORTELANDMOEDER", "GBAGEBOORTELANDVADER")) %>% 
   mutate(birthdate = dmy(paste(GBAGEBOORTEDAG, GBAGEBOORTEMAAND, GBAGEBOORTEJAAR, sep = "-"))) %>% 
   select(-GBAGEBOORTEJAAR, -GBAGEBOORTEMAAND, -GBAGEBOORTEDAG) %>%
   mutate(RINPERSOONS = as_factor(RINPERSOONS, levels = "values"),
@@ -33,9 +34,19 @@ gba_dat <-
   rename(geslacht = GBAGESLACHT)
 
 
+# to calculate classroom composition later, we construct a larger classroom sample with potential classmates of children in our cohort
 cohort_dat <- 
   gba_dat %>% 
-  filter(birthdate %within% interval(dmy(cfg$child_birth_date_min), dmy(cfg$child_birth_date_max)))
+  filter(birthdate %within% interval((dmy(cfg$child_birth_date_min) - years(2)), ((dmy(cfg$child_birth_date_max)) + years(2))))
+
+
+# free up memory
+rm(gba_dat)
+
+sample_size <- tibble(
+  n_0_birth_cohort = nrow(cohort_dat %>% 
+                            filter(birthdate%within%interval(dmy(cfg$child_birth_date_min), dmy(cfg$child_birth_date_max))))
+)
 
 
 #### PARENT LINK ####
@@ -48,33 +59,11 @@ cohort_dat <- inner_join(
   by = c("RINPERSOONS", "RINPERSOON")
 )
 
-# add parents birth dates to cohort
-cohort_dat <- 
-  cohort_dat %>% 
-  left_join(gba_dat %>% select(RINPERSOONS, RINPERSOON, birthdate),
-            by = c("RINPERSOONMa" = "RINPERSOON", "RINPERSOONSMa" = "RINPERSOONS"),
-            suffix = c("", "_ma")) %>%
-  left_join(gba_dat %>% select(RINPERSOONS, RINPERSOON, birthdate), 
-            by = c("RINPERSOONpa" = "RINPERSOON", "RINPERSOONSpa" = "RINPERSOONS"), 
-            suffix = c("", "_pa"))
 
-
-# free up memory
-rm(gba_dat)
-
-# filter out children with too old or too young parents
-cohort_dat <- 
-  cohort_dat %>% 
-  mutate(
-    age_at_birth_ma = interval(birthdate_ma, birthdate) / years(1),
-    age_at_birth_pa = interval(birthdate_pa, birthdate) / years(1)
-  ) %>% 
-  filter(
-    (is.na(age_at_birth_ma) | (age_at_birth_ma >= cfg$parent_min_age & age_at_birth_ma <= cfg$parent_max_age)),
-    (is.na(age_at_birth_pa) | (age_at_birth_pa >= cfg$parent_min_age & age_at_birth_pa <= cfg$parent_max_age))
-  ) %>%
-  select(-c(age_at_birth_ma, age_at_birth_pa, birthdate_ma, birthdate_pa))
-
+# record sample size
+sample_size <- sample_size %>% 
+  mutate(n_1_child_parent_link = 
+           nrow(cohort_dat %>% filter(birthdate%within%interval(dmy(cfg$child_birth_date_min), dmy(cfg$child_birth_date_max)))))
 
 
 #### REGION LINK ####
@@ -117,7 +106,7 @@ home_tab <-
 cohort_dat <- inner_join(cohort_dat, home_tab)
 
 # free up memory
-rm(adres_tab, home_tab, age_tab)
+rm(home_tab, age_tab)
 
 
 # clean the postcode table
@@ -129,14 +118,16 @@ vslpc_tab  <- read_sav(vslpc_path) %>%
     DATUMEINDPOSTCODENUMADRES = ymd(DATUMEINDPOSTCODENUMADRES),
     POSTCODENUM = ifelse(POSTCODENUM == "----", NA, POSTCODENUM)
   ) %>%
-  filter(!is.na(POSTCODENUM))
+  filter(!is.na(POSTCODENUM)) %>%
+  mutate(postcode3 = as.character(floor(as.numeric(POSTCODENUM)/10))) %>%
+  # mutate(postcode3 = substr(POSTCODENUM, 1, 3)) %>%
+  rename(postcode4 = POSTCODENUM)
 
 # only consider postal codes valid on target_date and create postcode-3 level
 vslpc_tab <- 
   vslpc_tab %>% 
   filter(dmy(cfg$postcode_target_date) %within% interval(DATUMAANVPOSTCODENUMADRES, DATUMEINDPOSTCODENUMADRES)) %>% 
-  mutate(postcode3 = as.character(floor(as.numeric(POSTCODENUM)/10))) %>% 
-  select(SOORTOBJECTNUMMER, RINOBJECTNUMMER, postcode4 = POSTCODENUM, postcode3)
+  select(SOORTOBJECTNUMMER, RINOBJECTNUMMER, postcode4, postcode3)
 
 # add the postal codes to the cohort
 cohort_dat <- inner_join(cohort_dat, vslpc_tab, 
@@ -159,6 +150,7 @@ vslgwb_tab <-
 
 cohort_dat <- inner_join(cohort_dat, vslgwb_tab)
 
+
 # add corop regions
 corop_tab  <- read_excel(loc$corop_data) %>%
   select("gemeente_code" = paste0("GM", year(dmy(cfg$corop_target_date))), 
@@ -169,9 +161,6 @@ cohort_dat <- left_join(cohort_dat, corop_tab, by = "gemeente_code") %>%
   select(-c(type_childhood_home, childhood_home))
 
 
-# free up memory
-rm(vslpc_tab, vslgwb_tab, corop_tab)
-
 # mutate factor regions
 cohort_dat <- 
   cohort_dat %>% 
@@ -179,5 +168,83 @@ cohort_dat <-
                   "wijk_code", "buurt_code", "corop_code"), as.factor))
 
 
+#### REGION LINK AT BIRTH FOR YOUTH PROTECTION ####
+
+mother_child_tab <- 
+  cohort_dat %>%
+  select(RINPERSOON, birthdate, RINPERSOONMa, RINPERSOONSMa) %>%
+  rename("RINPERSOON_kind" = "RINPERSOON")
+
+# get home address of mother at time of child's birth
+birth_adres <- 
+  adres_tab %>% 
+  # only consider the addresses of mother's that can be linked to the adres tab
+  filter(RINPERSOON %in% mother_child_tab$RINPERSOONMa & RINPERSOONS %in% mother_child_tab$RINPERSOONSMa) %>%
+  left_join(mother_child_tab, by = c("RINPERSOON" = "RINPERSOONMa", "RINPERSOONS" = "RINPERSOONSMa"), 
+            relationship = "many-to-many") %>%
+  # only consider addresses at the time of child's birth
+  filter(birthdate %within% interval(GBADATUMAANVANGADRESHOUDING, GBADATUMEINDEADRESHOUDING)) %>%
+  group_by(RINPERSOON_kind, RINPERSOON) %>%
+  summarise(birth_home = RINOBJECTNUMMER[1],
+            type_birth_home = SOORTOBJECTNUMMER[1]) 
+
+# select postal codes
+birth_adres <- 
+  inner_join(birth_adres, vslpc_tab, 
+             by = c("type_birth_home" = "SOORTOBJECTNUMMER", 
+                    "birth_home" = "RINOBJECTNUMMER")) %>%
+  rename("postcode4_birth" = "postcode4",
+         "postcode3_birth" = "postcode3")
+
+
+# add municipalities
+vslgwb_tab <- 
+  vslgwb_tab %>% 
+  rename("gemeente_code_birth" = "gemeente_code", 
+         "wijk_code_birth" = "wijk_code", 
+         "buurt_code_birth" = "buurt_code")
+
+birth_adres <- inner_join(birth_adres, vslgwb_tab, 
+                          by = c("type_birth_home" = "type_childhood_home", 
+                                 "birth_home" = "childhood_home"))
+
+# add corop regions
+corop_tab  <- read_excel(loc$corop_data) %>%
+  select("gemeente_code_birth" = paste0("GM", year(dmy(cfg$corop_target_date))), 
+         "corop_code_birth" = paste0("COROP", year(dmy(cfg$corop_target_date)))) %>%
+  unique()
+
+birth_adres <- 
+  birth_adres %>%
+  left_join(corop_tab, by = "gemeente_code_birth") %>%
+  select(-c(type_birth_home, birth_home))
+
+
+# merge with cohort data and only keep records where address information is known
+cohort_dat <- 
+  left_join(cohort_dat, birth_adres, by = c("RINPERSOON" = "RINPERSOON_kind")) %>% 
+  mutate(across(c("postcode4_birth", "postcode3_birth", "gemeente_code_birth", 
+                  "wijk_code_birth", "buurt_code_birth", "corop_code_birth"), as.factor)) %>%
+  filter(!is.na(postcode3_birth), !is.na(gemeente_code_birth), !is.na(wijk_code_birth)) %>% 
+  relocate(c("postcode4_birth", "postcode3_birth", "gemeente_code_birth", 
+             "wijk_code_birth", "buurt_code_birth", "corop_code_birth"), .after = "corop_code") %>%
+  select(-RINPERSOON.y)
+
+rm(birth_adres, corop_tab, mother_child_tab, vslgwb_tab, vslpc_tab, adres_tab)
+
+# mutate factor regions
+cohort_dat <- 
+  cohort_dat %>% 
+  mutate(across(c("postcode4_birth", "postcode3_birth", "gemeente_code_birth", 
+                  "wijk_code_birth", "buurt_code_birth", "corop_code_birth"), as.factor))
+
+
+# record sample size
+sample_size <- sample_size %>% 
+  mutate(n_2_region_link = 
+           nrow(cohort_dat %>% filter(birthdate%within%interval(dmy(cfg$child_birth_date_min), dmy(cfg$child_birth_date_max)))))
+
 #### WRITE OUTPUT TO SCRATCH ####
 write_rds(cohort_dat, file.path(loc$scratch_folder, "01_cohort.rds"))
+
+write_rds(sample_size, file.path(loc$scratch_folder, "01_sample_size.rds"))
