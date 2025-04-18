@@ -1,0 +1,68 @@
+default:
+  data_preparation:
+    # The name of the cohort
+    cohort_name: "prim8"
+    
+    # Child birth date filters the cohort by age
+    child_birth_date_min: "01/01/2003"
+    child_birth_date_max: "31/12/2006"
+    
+    # The cohort is allowed to be unregistered for this many days 
+    # in this period
+    child_live_slack_days: 31
+    
+    # Should we use the address registration of a child on a specific age
+    childhood_home_age: 10
+    
+   # Postal code link to homes will be considered on this target date
+    postcode_target_date: "31/12/2023"
+    # Neighbourhood geo link to homes will be considered on this target date
+    gwb_target_date: "31/12/2023"
+    # Corop geo link to homes will be considered on this target date
+    corop_target_date: "31/12/2023"
+    
+    # Income will be deflated to cpi_base_year euros.
+    cpi_base_year: 2020
+    
+    # Parent income year range
+    parent_income_year_min: 2014
+    parent_income_year_max: 2018
+    
+    # Parent wealth year range
+    parent_wealth_year_min: 2014
+    parent_wealth_year_max: 2018
+    
+    # The parents education will be added to to the cohort
+    education_parents: true
+    
+    # elementary school year range
+    elementary_school_year_min: 2014
+    elementary_school_year_max: 2018
+    
+    
+  file_locations:
+    # The data folder is the root folder of the cbs microdata tables
+    data_folder: "G:/"
+    # The scratch folder is used to write intermediate output
+    scratch_folder: "scratch/prim8"
+    
+    # path to the cbs microdata
+    gba_data: "Bevolking/GBAPERSOONTAB/2023/GBAPERSOON2023TABV1.sav"
+    gbaao_data: "Bevolking/GBAADRESOBJECTBUS/GBAADRESOBJECT2023BUSV1.sav"
+    kind_data: "Bevolking/KINDOUDERTAB/KINDOUDER2023TABV1.sav"
+    postcode_data: "BouwenWonen/VSLPOSTCODEBUS/VSLPOSTCODEBUSV2024031.sav"
+    vslgwb_data: "BouwenWonen/VSLGWBTAB/VSLGWB2024TAB03V1.sav"
+    woon_data: "BouwenWonen/LEVCYCLWOONNIETWOONBUS/LEVCYCLWOONNIETWOONBUSV2024122.sav"
+    household_data: "Bevolking/GBAHUISHOUDENSBUS/GBAHUISHOUDENS2020BUSV1.sav"
+
+
+    # resources
+    cpi_index_data: "resources/Consumentenprijzen__prijsindex_2015_100_14112022_221558.xlsx"
+    migration_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/LANDAKTUEELREFV11.SAV"
+    corop_data: "K:/Utilities/HULPbestanden/GebiedeninNederland/Gemeenten en COROP vanaf 1981.xlsx"
+    advice_data: "resources/vo_advisering.xlsx"
+    advice_data_sheet: "table"
+    opleiding_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/OPLEIDINGSNRREFV34.SAV"
+    cto_data: "K:/Utilities/Code_Listings/SSBreferentiebestanden/CTOREFV12.SAV"
+  
+

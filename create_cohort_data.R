@@ -2,14 +2,15 @@
 #
 # Full cohort creation script
 #
-# (c) ODISSEI Social Data Science team 2023
+# (c) ODISSEI Social Data Science team 2025
 
 
 # input the desired config file here:
-# yml: main, students, high_school, elementary_school, classroom, 
-# perinatal
-cohort <- "main"
+# yml: age35, age21, age16, prim8, newborns
+cohort <- "age35"
 cfg_file <- paste0("config/", cohort, ".yml")
+
+excel_path <- 'H:/IGM project/Excel/output'
 
 
 #### CONFIGURATION ####
